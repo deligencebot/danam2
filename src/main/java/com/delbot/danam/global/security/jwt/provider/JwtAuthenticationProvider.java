@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import com.delbot.danam.global.security.jwt.token.JwtAuthenticationToken;
 import com.delbot.danam.global.security.jwt.util.JwtTokenizer;
 import com.delbot.danam.global.security.jwt.util.LoginInfoDto;
+import com.delbot.danam.global.util.ObjectUtil;
 
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +42,7 @@ public class JwtAuthenticationProvider implements AuthenticationProvider{
   }
 
   private List<GrantedAuthority> getGrantedAuthorities(Claims claims) {
-    List<String> roles = (List<String>) claims.get("roles");
+    List<String> roles = ObjectUtil.convertToListString(claims.get("roles"));
     List<GrantedAuthority> authorities = new ArrayList<>();
     for (String role : roles) {
       authorities.add(() -> role);

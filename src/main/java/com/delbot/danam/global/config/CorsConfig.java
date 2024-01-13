@@ -15,9 +15,12 @@ public class CorsConfig {
   public CorsConfigurationSource corsConfigurationSource() {
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     CorsConfiguration config = new CorsConfiguration();
-    // config.setAllowCredentials(true);
+    config.setAllowCredentials(true);
     config.addAllowedOrigin("*");
     config.addAllowedHeader("*");
+    config.addExposedHeader("Authorization");
+    config.addExposedHeader("accessToken");
+    config.addExposedHeader("refreshToken");
     config.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "OPTIONS", "DELETE"));
     source.registerCorsConfiguration("/**", config);
     return source;

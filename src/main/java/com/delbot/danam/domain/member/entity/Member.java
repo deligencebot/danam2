@@ -1,11 +1,14 @@
 package com.delbot.danam.domain.member.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.delbot.danam.domain.post.entity.Post;
 import com.delbot.danam.domain.role.Role;
 
 import jakarta.persistence.Column;
@@ -16,6 +19,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -55,6 +59,9 @@ public class Member {
           joinColumns = @JoinColumn(name = "member_id"),
           inverseJoinColumns = @JoinColumn(name = "role_id"))
   private Set<Role> roles = new HashSet<>();
+
+  @OneToMany(mappedBy = "member")
+  private List<Post> postList = new ArrayList<>();
 
   @Builder
   public Member(String name, String password, String nickname, String email) {

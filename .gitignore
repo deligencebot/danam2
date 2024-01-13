@@ -36,5 +36,7 @@ out/
 ### VS Code ###
 .vscode/
 
+### Setting ###
 secret.properties
 application.yml
+node_modules/

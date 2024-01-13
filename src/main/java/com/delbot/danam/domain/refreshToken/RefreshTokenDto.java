@@ -1,11 +1,13 @@
 package com.delbot.danam.domain.refreshToken;
 
-import jakarta.validation.constraints.NotEmpty;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class RefreshTokenDto {
   //
-  @NotEmpty
-  String refreshToken;
+  private String refreshToken;
 }

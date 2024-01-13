@@ -61,6 +61,13 @@ dependencies {
 	// Annotation Bug
 	implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
+	// Json Data Type
+	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+  // Test Lombok
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'io.projectreactor:reactor-test'

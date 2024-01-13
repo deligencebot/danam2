@@ -1,4 +1,4 @@
-package com.delbot.danam.domain.member.api;
+package com.delbot.danam.domain.member.controller;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +30,7 @@ import com.delbot.danam.domain.role.Role;
 import com.delbot.danam.global.security.jwt.util.IfLogin;
 import com.delbot.danam.global.security.jwt.util.JwtTokenizer;
 import com.delbot.danam.global.security.jwt.util.LoginUserDto;
+import com.delbot.danam.global.util.ObjectUtil;
 
 import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
@@ -151,11 +152,11 @@ public class MemberController {
     RefreshToken refreshToken = refreshTokenService.findByRefreshToken(refreshTokenDto.getRefreshToken());
 
     Claims claims = jwtTokenizer.parseRefreshToken(refreshToken.getValue());
-    Long memberId = Long.valueOf((Integer)claims.get("memberId"));
+    Long memberId = Long.valueOf(String.valueOf(claims.get("memberId")));
 
     Member member = memberService.findById(memberId);
 
-    List<String> roles = (List<String>) claims.get("roles");
+    List<String> roles = ObjectUtil.convertToListString(claims.get("roles"));
     String name = claims.getSubject();
     String nickname = claims.get("nickname").toString();
     String email = claims.get("email").toString();
@@ -199,7 +200,7 @@ public class MemberController {
     RefreshToken refreshToken = refreshTokenService.findByRefreshToken(request.getRefreshToken());
 
     Claims claims = jwtTokenizer.parseRefreshToken(refreshToken.getValue());
-    Long memberId = Long.valueOf((Integer)claims.get("memberId"));
+    Long memberId = Long.valueOf(String.valueOf(claims.get("memberId")));
 
     Member member = memberService.findById(memberId);
 
@@ -224,6 +225,9 @@ public class MemberController {
             .refreshToken(newRefreshToken)
             .memberId(updatedMember.getMemberId())
             .name(updatedMember.getName())
+            .nickname(updatedMember.getNickname())
+            .email(updatedMember.getEmail())
+            .createdDate(updatedMember.getCreatedDate())
             .build();
 
     return new ResponseEntity<>(updateResponse, HttpStatus.OK);
