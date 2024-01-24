@@ -15,7 +15,10 @@ public enum PostErrorCode implements ErrorCode {
   // 401 UNAUTHORIZED
   UNAUTHORIZED_ACCESS("권한이 없는 유저입니다.", HttpStatus.UNAUTHORIZED),
   // 404 NOT_FOUND
-  NOT_FOUND_POST("게시글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
+  NOT_FOUND_POST("게시글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+  // 500 Internal Server Error
+  FILE_UPLOAD_ERROR("파일 업로드를 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+  UNKNOWN_ERROR("Unknown Error has occurred.", HttpStatus.INTERNAL_SERVER_ERROR);
 
   private final String message;
   private final HttpStatus status;

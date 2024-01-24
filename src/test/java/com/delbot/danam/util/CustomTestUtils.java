@@ -4,11 +4,11 @@ import static org.mockito.Mockito.mock;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Set;
 import java.util.List;
-import java.util.ArrayList;
+import java.util.Set;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -18,13 +18,14 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.post.entity.Post;
+import com.delbot.danam.domain.post.entity.PostFile;
+import com.delbot.danam.domain.post.entity.PostImage;
 import com.delbot.danam.domain.role.Role;
 import com.delbot.danam.global.security.jwt.token.JwtAuthenticationToken;
 import com.delbot.danam.global.security.jwt.util.LoginInfoDto;
 import com.delbot.danam.global.security.jwt.util.LoginUserDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-
 
 public class CustomTestUtils {
   //
@@ -50,10 +51,16 @@ public class CustomTestUtils {
             "board", 
             "Fake Title", 
             "Hello World!", 
-            0L, 
+            0L,
+            false,
+            false,
+            true,
             LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), 
             null, 
-            member);
+            member,
+            new ArrayList<>(),
+            new ArrayList<>()
+    );
   }
 
   public static Page<Post> generateMockPage(String category, Pageable pageable) {
@@ -66,10 +73,16 @@ public class CustomTestUtils {
               category, 
               "Title" + String.valueOf(i), 
               "Hello!!", 
-              0L, 
+              0L,
+              false,
+              false,
+              true,
               LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), 
               null, 
-              mock(Member.class)));
+              mock(Member.class),
+              null,
+              null
+      ));
     }
 
     int start = (int) pageable.getOffset();
@@ -77,6 +90,28 @@ public class CustomTestUtils {
     List<Post> subPostList = postList.subList(start, end);
 
     return new PageImpl<>(subPostList, pageable, postList.size());
+  }
+
+  public static PostFile createMockPostFile(Post post, Long l) {
+    return new PostFile(
+            l, 
+            "mockUrl" + l, 
+            "mockStoredName" + l, 
+            "mockOriginalName" + l,
+            1024*1024L,
+            LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), 
+            post);
+  }
+
+  public static PostImage createMockPostImage(Post post, Long l) {
+    return new PostImage(
+            l, 
+            "mockUrl" + l, 
+            "mockStoredName" + l, 
+            "mockOriginalName" + l,
+            1024*1024L,
+            LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), 
+            post);
   }
 
   public static LoginUserDto getLoginUserDto(Member member) {
@@ -108,8 +143,10 @@ public class CustomTestUtils {
     try {
       ObjectMapper objectMapper = new ObjectMapper();
       objectMapper.registerModule(new JavaTimeModule());
+
       return objectMapper.writeValueAsString(object);
     } catch (Exception e) {
+      e.printStackTrace();
       throw new RuntimeException();
     }
   }

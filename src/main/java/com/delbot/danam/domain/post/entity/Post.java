@@ -1,5 +1,7 @@
 package com.delbot.danam.domain.post.entity;
 
+import java.util.List;
+import java.util.ArrayList;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
@@ -14,6 +16,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -43,11 +46,11 @@ public class Post {
 
   private Long hits;
 
-  // private boolean isNotice;
+  private boolean isNotice;
 
-  // private boolean isEdited;
+  private boolean isEdited;
 
-  // private boolean isCommentable;
+  private boolean isCommentable;
 
   @CreationTimestamp
   private LocalDateTime createdTime;
@@ -59,6 +62,12 @@ public class Post {
   @JoinColumn(name = "member_id")
   private Member member;
 
+  @OneToMany(mappedBy = "post", orphanRemoval = true)
+  private List<PostImage> postImages = new ArrayList<>();
+
+  @OneToMany(mappedBy = "post", orphanRemoval = true)
+  private List<PostFile> postFiles = new ArrayList<>();
+
   @Builder
   public Post(Long postNo, String category, String title, String contents, Member member) {
     this.postNo = postNo;
@@ -66,11 +75,15 @@ public class Post {
     this.title = title;
     this.contents = contents;
     this.hits = 0L;
+    this.isNotice = false;
+    this.isEdited = false;
+    this.isCommentable = true;
     this.member = member;
   }
 
   public void update(String title, String contents) {
     this.title = title;
     this.contents = contents;
+    this.isEdited = true;
   }
 }

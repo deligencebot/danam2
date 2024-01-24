@@ -50,7 +50,6 @@ import com.delbot.danam.global.security.jwt.util.JwtTokenizer;
 import com.delbot.danam.global.security.jwt.util.LoginUserDto;
 import com.delbot.danam.global.util.ObjectUtil;
 import com.delbot.danam.util.CustomTestUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 
 @WebMvcTest(controllers = MemberController.class)
@@ -60,9 +59,6 @@ public class MemberControllerTest {
   //
   @Autowired
   MockMvc mockMvc;
-
-  @Autowired
-  ObjectMapper objectMapper;
 
   @MockBean
   MemberService memberService;

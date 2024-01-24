@@ -20,7 +20,9 @@ public enum MemberErrorCode implements ErrorCode{
   // 409 CONFLICT
   DUPLICATED_MEMBER("이미 사용중인 아이디입니다.", HttpStatus.CONFLICT),
   DUPLICATED_NICKNAME("이미 사용중인 별명입니다.", HttpStatus.CONFLICT),
-  DUPLICATED_EMAIL("이미 존재하는 이메일입니다.", HttpStatus.CONFLICT);
+  DUPLICATED_EMAIL("이미 존재하는 이메일입니다.", HttpStatus.CONFLICT),
+  // 500 INTERNAL_SERVER_ERROR
+  UNKNOWN_ERROR("Unknown Error has occurred.", HttpStatus.INTERNAL_SERVER_ERROR);
 
   private final String message;
   private final HttpStatus status;
