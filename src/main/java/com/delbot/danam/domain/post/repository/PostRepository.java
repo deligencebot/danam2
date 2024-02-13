@@ -10,13 +10,16 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.post.entity.Post;
 
 public interface PostRepository extends JpaRepository<Post, Long>, PostCustomRepository {
   //
+  Page<Post> findAll(Pageable pageable);
   List<Post> findByCategory(String category);
   Page<Post> findByCategory(String category, Pageable pageable);
   Optional<Post> findByCategoryAndPostNo(String category, Long postNo);
+  List<Post> findByMember(Member member);
   @Modifying
   @Query(value = "UPDATE Post p SET p.hits=p.hits+1 WHERE p.postId=:postId")
   void updateHits(@Param("postId") Long postId);

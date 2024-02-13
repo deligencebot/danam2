@@ -5,7 +5,6 @@ import static org.mockito.Mockito.mock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -16,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import com.delbot.danam.domain.comment.entity.Comment;
 import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.post.entity.Post;
 import com.delbot.danam.domain.post.entity.PostFile;
@@ -41,7 +41,26 @@ public class CustomTestUtils {
             "user0001@google.com", 
             LocalDateTime.now().truncatedTo(ChronoUnit.DAYS), 
             roles, 
-            Collections.emptyList());
+            new ArrayList<>(),
+            new ArrayList<>()
+    );
+  }
+
+  public static Member createMockMember(Long id) {
+    Role role = new Role(1L, "ROLE_USER");
+    Set<Role> roles = Set.of(role);
+
+    return new Member(
+            id, 
+            "user0001", 
+            "asdf1234!", 
+            "홍길동000" + id + "a", 
+            "user0001@google.com", 
+            LocalDateTime.now().truncatedTo(ChronoUnit.DAYS), 
+            roles, 
+            new ArrayList<>(),
+            new ArrayList<>()
+    );
   }
 
   public static Post createMockPost(Member member) {
@@ -58,6 +77,7 @@ public class CustomTestUtils {
             LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), 
             null, 
             member,
+            new ArrayList<>(),
             new ArrayList<>(),
             new ArrayList<>()
     );
@@ -80,6 +100,7 @@ public class CustomTestUtils {
               LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), 
               null, 
               mock(Member.class),
+              null,
               null,
               null
       ));
@@ -112,6 +133,21 @@ public class CustomTestUtils {
             1024*1024L,
             LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), 
             post);
+  }
+
+  public static Comment createMockComment(Long id, Member member, Post post) {
+    return new Comment(
+            id, 
+            "Fake Comment Contents No." + id, 
+            member, 
+            post, 
+            null, 
+            0, 
+            false, 
+            false, 
+            null, 
+            LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), 
+            null);
   }
 
   public static LoginUserDto getLoginUserDto(Member member) {

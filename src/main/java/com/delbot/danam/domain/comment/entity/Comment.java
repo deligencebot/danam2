@@ -1,4 +1,4 @@
-package com.delbot.danam.domain.post.entity;
+package com.delbot.danam.domain.comment.entity;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -7,8 +7,8 @@ import java.util.List;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import com.delbot.danam.domain.comment.entity.Comment;
 import com.delbot.danam.domain.member.entity.Member;
+import com.delbot.danam.domain.post.entity.Post;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -26,32 +26,39 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "tb_post")
+@Table(name = "tb_comment")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Getter
-public class Post {
+public class Comment {
   //
   @Id
-  @Column(name = "post_id")
+  @Column(name = "comment_id")
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long postId;
-
-  private Long postNo;
-
-  private String category;
-
-  private String title;
+  private Long commentId;
 
   private String contents;
 
-  private Long hits;
+  @ManyToOne
+  @JoinColumn(name = "member_id")
+  private Member member;
 
-  private boolean isNotice;
+  @ManyToOne
+  @JoinColumn(name = "post_id")
+  private Post post;
+
+  @ManyToOne
+  @JoinColumn(name = "parent")
+  private Comment parent;
+
+  private int depth;
 
   private boolean isUpdated;
 
-  private boolean isCommentable;
+  private boolean isDeleted;
+
+  @OneToMany(mappedBy = "parent", orphanRemoval = true)
+  private List<Comment> children = new ArrayList<>();
 
   @CreationTimestamp
   private LocalDateTime createdTime;
@@ -59,35 +66,28 @@ public class Post {
   @UpdateTimestamp
   private LocalDateTime updatedTime;
 
-  @ManyToOne
-  @JoinColumn(name = "member_id")
-  private Member member;
-
-  @OneToMany(mappedBy = "post", orphanRemoval = true)
-  private List<Comment> comments = new ArrayList<>();
-
-  @OneToMany(mappedBy = "post", orphanRemoval = true)
-  private List<PostImage> postImages = new ArrayList<>();
-
-  @OneToMany(mappedBy = "post", orphanRemoval = true)
-  private List<PostFile> postFiles = new ArrayList<>();
-
   @Builder
-  public Post(Long postNo, String category, String title, String contents, Member member) {
-    this.postNo = postNo;
-    this.category = category;
-    this.title = title;
+  public Comment(String contents, Member member, Post post, int depth, Comment parent) {
     this.contents = contents;
-    this.hits = 0L;
-    this.isNotice = false;
-    this.isUpdated = false;
-    this.isCommentable = true;
     this.member = member;
+    this.post = post;
+    this.depth = depth;
+    this.parent = parent;
+    this.isUpdated = false;
+    this.isDeleted = false;
   }
 
-  public void update(String title, String contents) {
-    this.title = title;
+  public void updateComment(String contents) {
     this.contents = contents;
     this.isUpdated = true;
+  }
+
+  public void updateIsDeleted() {
+    this.isDeleted = true;
+  }
+
+  // Test Method
+  public void updateParent(Comment comment) {
+    this.parent = comment;
   }
 }

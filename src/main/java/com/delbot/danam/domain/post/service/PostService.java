@@ -1,10 +1,12 @@
 package com.delbot.danam.domain.post.service;
 
 import java.util.Comparator;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.post.entity.Post;
 import com.delbot.danam.domain.post.exception.PostErrorCode;
 import com.delbot.danam.domain.post.repository.PostRepository;
@@ -17,7 +19,7 @@ public class PostService {
   //
   private final PostRepository postRepository;
 
-  @Transactional
+  @Transactional(readOnly = true)
   public Post getPost(String category, Long postNo) {
     Post post = postRepository.findByCategoryAndPostNo(category, postNo).orElseThrow(
       () -> PostErrorCode.NOT_FOUND_POST.defaultException()
@@ -46,6 +48,10 @@ public class PostService {
             .map(Post::getPostNo)
             .max(Comparator.naturalOrder())
             .orElse(0L) + 1L;
+  }
+
+  public List<Post> getMemberInfoPosts(Member member) {
+    return postRepository.getMemberInfoPosts(member);
   }
 }
 

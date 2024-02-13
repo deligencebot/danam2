@@ -30,7 +30,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
-	// Jakarta RESTful WS API	
+	// Jakarta RESTful
 	implementation 'jakarta.ws.rs:jakarta.ws.rs-api'
 
 	// AOP
@@ -61,7 +61,7 @@ dependencies {
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
 	// AWS
-	implementation 'io.awspring.cloud:spring-cloud-starter-aws:2.4.4'
+	implementation 'io.awspring.cloud:spring-cloud-starter-aws:2.4.4' 
 
   // Lombok
 	compileOnly 'org.projectlombok:lombok'

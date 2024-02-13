@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.delbot.danam.domain.comment.entity.Comment;
 import com.delbot.danam.domain.post.entity.Post;
 import com.delbot.danam.domain.role.Role;
 
@@ -63,6 +64,9 @@ public class Member {
   @OneToMany(mappedBy = "member")
   private List<Post> postList = new ArrayList<>();
 
+  @OneToMany(mappedBy = "member")
+  private List<Comment> commentList = new ArrayList<>();
+
   @Builder
   public Member(String name, String password, String nickname, String email) {
     this.name = name;
@@ -89,5 +93,9 @@ public class Member {
   public void updateDetails(String nickname, String email) {
     this.nickname = nickname;
     this.email = email;
+  }
+
+  public void updatePassword(String password) {
+    this.password = password;
   }
 }

@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.delbot.danam.domain.post.entity.Post;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import lombok.Builder;
 import lombok.Data;
@@ -22,9 +23,11 @@ public class PostResponseDto {
     private List<PostFileDto> postFiles;
     private List<PostImageDto> postImages;
     private boolean isNotice;
-    private boolean isEdited;
+    private boolean isUpdated;
     private boolean isCommentable;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
     private LocalDateTime createdTime;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
     private LocalDateTime updatedTime;
 
     @Builder
@@ -39,7 +42,7 @@ public class PostResponseDto {
       this.postFiles = PostFileDto.convertDto(post.getPostFiles());
       this.postImages = PostImageDto.convertDto(post.getPostImages());
       this.isNotice = post.isNotice();
-      this.isEdited = post.isEdited();
+      this.isUpdated = post.isUpdated();
       this.isCommentable = post.isCommentable();
       this.createdTime = post.getCreatedTime();
       this.updatedTime = post.getUpdatedTime();
@@ -55,7 +58,10 @@ public class PostResponseDto {
     private String title;
     private String writer;
     private Long hits;
+    private boolean isUpdated;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
     private LocalDateTime createdTime;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
     private LocalDateTime updatedTime;
   }
 }

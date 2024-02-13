@@ -14,9 +14,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +36,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockMultipartFile;
@@ -46,7 +52,6 @@ import com.delbot.danam.config.TestSecurityConfig;
 import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.member.service.MemberService;
 import com.delbot.danam.domain.post.dto.PostRequestDto;
-import com.delbot.danam.domain.post.dto.PostUpdateRequestDto;
 import com.delbot.danam.domain.post.entity.Post;
 import com.delbot.danam.domain.post.entity.PostFile;
 import com.delbot.danam.domain.post.entity.PostImage;
@@ -89,10 +94,50 @@ public class PostControllerTest {
   @MockBean
   IfLoginArgumentResolver ifLoginArgumentResolver;
 
+  // http://localhost:8080/post
+  @Test
+  @DisplayName("모든 게시판 게시글 검색(전체) 테스트")
+  void searchPosts_success() throws Exception {
+    Page<Post> mockPage = CustomTestUtils.generateMockPage("mockCategory", PageRequest.of(0, 5, Sort.Direction.DESC, "postNo"));
+
+    Authentication authentication = new TestingAuthenticationToken("user0001", null, "USER");
+
+    given(pageService.getPage(any(Pageable.class))).willReturn(mockPage);
+
+    mockMvc.perform(
+            get("/post")
+            .with(authentication(authentication)))            
+            .andDo(print())
+            .andExpect(status().isOk());
+
+    verify(pageService).getPage(any(Pageable.class));
+  }
+
+  // http://localhost:8080/post?target=comment&keyword=aaa
+  @Test
+  @DisplayName("모든 게시판 게시글 검색(댓글) 테스트")
+  void searchPosts_comment_success() throws Exception {
+    Page<Post> mockPage = CustomTestUtils.generateMockPage("mockCategory", PageRequest.of(0, 5, Sort.Direction.DESC, "postNo"));
+
+    Authentication authentication = new TestingAuthenticationToken("user0001", null, "USER");
+
+    given(pageService.searchByComment(anyString(), any(Pageable.class))).willReturn(mockPage);
+
+    mockMvc.perform(
+            get("/post")
+            .param("target", "comment")
+            .param("keyword", "aaa")
+            .with(authentication(authentication)))            
+            .andDo(print())
+            .andExpect(status().isOk());
+
+    verify(pageService).searchByComment(anyString(), any(Pageable.class));
+  }
+
   // http://localhost:8080/post/{category} (category = board)
   @Test
-  @DisplayName("검색조회(전체) 테스트")
-  void category_success() throws Exception {
+  @DisplayName("게시글 검색(전체) 테스트")
+  void searchCategoryPosts_success() throws Exception {
     String category = "board";
     Page<Post> mockPage = CustomTestUtils.generateMockPage(category, PageRequest.of(0, 5, Sort.Direction.DESC, "postNo"));
 
@@ -111,8 +156,8 @@ public class PostControllerTest {
 
   // http://localhost:8080/post/{category}?target=all&keyword=aaa (category = board)
   @Test
-  @DisplayName("검색조회(All조건) 테스트")
-  void category_All_success() throws Exception {
+  @DisplayName("게시글 검색(모든조건) 테스트")
+  void searchCategoryPosts_All_success() throws Exception {
     String category = "board";
     Page<Post> mockPage = CustomTestUtils.generateMockPage(category, PageRequest.of(0, 5, Sort.Direction.DESC, "postNo"));
 
@@ -209,7 +254,7 @@ public class PostControllerTest {
 
     String category = "board";
     Long no = 1L;
-    PostUpdateRequestDto updateRequestDto = new PostUpdateRequestDto();
+    PostRequestDto.Update updateRequestDto = new PostRequestDto.Update();
     updateRequestDto.setTitle("updated title");
     updateRequestDto.setContents("updated Hello world!!");
     updateRequestDto.setNotice(false);
@@ -226,11 +271,12 @@ public class PostControllerTest {
             updateRequestDto.getContents(), 
             mockPost.getHits(), 
             mockPost.isNotice(), 
-            mockPost.isEdited(), 
+            mockPost.isUpdated(), 
             mockPost.isCommentable(), 
             mockPost.getCreatedTime(), 
             mockPost.getCreatedTime().plus(Duration.ofMillis(60 * 60 * 1000L)), 
             mockMember, 
+            new ArrayList<>(),
             List.of(mockPostImage1, mockPostImage3),
             new ArrayList<>()
     );
@@ -314,23 +360,24 @@ public class PostControllerTest {
               mockPost.getContents(), 
               mockPost.getHits(), 
               mockPost.isNotice(), 
-              mockPost.isEdited(), 
+              mockPost.isUpdated(), 
               mockPost.isCommentable(), 
               mockPost.getCreatedTime(), 
               null, 
-              mockMember, 
+              mockMember,
+              new ArrayList<>(), 
               List.of(mockPostImage1, mockPostImage2),
               List.of(mockPostFile)
     );
 
     String category = "board";
-    PostRequestDto postRequestDto = new PostRequestDto();
-    postRequestDto.setTitle("Title");
-    postRequestDto.setContents("Hello World!!");
-    postRequestDto.setCommentable(true);
-    postRequestDto.setNotice(false);
+    PostRequestDto.Post requestDto = new PostRequestDto.Post();
+    requestDto.setTitle("Title");
+    requestDto.setContents("Hello World!!");
+    requestDto.setCommentable(true);
+    requestDto.setNotice(false);
 
-    String request = CustomTestUtils.toJson(postRequestDto);
+    String request = CustomTestUtils.toJson(requestDto);
 
     given(memberService.findById(anyLong())).willReturn(mockMember);
 
@@ -393,5 +440,39 @@ public class PostControllerTest {
             .andExpect(status().isOk()); 
 
     verify(postService).getPost(anyString(), anyLong());
+  }
+
+  // http://localhost:8080/post/download?fileUrl=asdf1234
+  @Test
+  @DisplayName("다운로드 테스트")
+  void downloadFile_success() throws Exception {
+    JwtAuthenticationToken jwtAuthenticationToken = CustomTestUtils.getLoginUserJwtAuthenticationToken(CustomTestUtils.createMockMember());
+    String fileUrl = "asdf1234";
+    String storedFileName = "20240101_mockFile.txt";
+    byte[] mockFileContent = "Mock File Content".getBytes();
+    PostFile mockFile = new PostFile(
+      1L, 
+      fileUrl, 
+      storedFileName, 
+      "mockName", 
+      1024*1024, 
+      LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), 
+      null);
+
+    given(postFileRepository.findByFileUrl(fileUrl)).willReturn(mockFile);
+
+    given(awsS3Service.downloadFile(storedFileName)).willReturn(mockFileContent);
+
+    mockMvc.perform(
+            get("/post/download")
+            .param("fileUrl", fileUrl)
+            .with(authentication(jwtAuthenticationToken)))
+            .andDo(print())
+            .andExpect(status().isOk())
+            .andExpect(header().string(
+                HttpHeaders.CONTENT_DISPOSITION, 
+                "form-data; name=\"attachment\"; filename=" + "\"" + URLEncoder.encode(storedFileName, "UTF-8") + "\""
+                    .replaceAll("\\+", "%20")))
+            .andExpect(content().bytes(mockFileContent));
   }
 }

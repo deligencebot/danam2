@@ -1,7 +1,6 @@
 package com.delbot.danam.domain.member.controller;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
@@ -14,15 +13,18 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.delbot.danam.domain.member.dto.MemberLoginRequestDto;
+import com.delbot.danam.domain.comment.dto.CommentResponseDto;
+import com.delbot.danam.domain.comment.service.CommentService;
+import com.delbot.danam.domain.member.dto.MemberRequestDto;
 import com.delbot.danam.domain.member.dto.MemberResponseDto;
-import com.delbot.danam.domain.member.dto.MemberSignupRequestDto;
-import com.delbot.danam.domain.member.dto.MemberUpdateRequestDto;
 import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.member.exception.MemberErrorCode;
 import com.delbot.danam.domain.member.service.MemberService;
+import com.delbot.danam.domain.post.dto.PostResponseDto;
+import com.delbot.danam.domain.post.service.PostService;
 import com.delbot.danam.domain.refreshToken.RefreshToken;
 import com.delbot.danam.domain.refreshToken.RefreshTokenDto;
 import com.delbot.danam.domain.refreshToken.RefreshTokenService;
@@ -47,26 +49,32 @@ public class MemberController {
   private final RefreshTokenService refreshTokenService;
   private final JwtTokenizer jwtTokenizer;
   private final PasswordEncoder passwordEncoder;
+  private final PostService postService;
+  private final CommentService commentService;
 
   @PostMapping("/signup")
-  public ResponseEntity<?> signup(@RequestBody @Valid MemberSignupRequestDto request, BindingResult bindingResult) {
+  public ResponseEntity<?> signup(@RequestBody @Valid MemberRequestDto.Signup request, BindingResult bindingResult) {
     if (bindingResult.hasErrors()) {
-      throw MemberErrorCode.INVALID_VALUE.defaultException();
+      throw MemberErrorCode.INVALID_INPUT_VALUE.defaultException();
     }
 
     if (!request.getPassword().equals(request.getPasswordCheck())) {
-      throw MemberErrorCode.WRONG_PASSWORD_CHECK.defaultException();
+      bindingResult.rejectValue("passwordCheck", "NOT_EQUAL_PASSWORD_CHECK", "비밀번호가 일치하지 않습니다.");
+      throw MemberErrorCode.NOT_EQUAL_PASSWORD_CHECK.defaultException();
     }
 
     if (memberService.findByName(request.getName()).isPresent()) {
-      throw MemberErrorCode.DUPLICATED_MEMBER.defaultException();
+      bindingResult.rejectValue("name", "DUPLICATED_NAME", "이미 사용중인 아이디입니다.");
+      throw MemberErrorCode.DUPLICATED_NAME.defaultException();
     }
 
     if (memberService.findByNickname(request.getNickname()).isPresent()) {
+      bindingResult.rejectValue("nickname", "DUPLICATED_NICKNAME", "이미 사용중인 별명입니다.");
       throw MemberErrorCode.DUPLICATED_NICKNAME.defaultException();
     }
 
     if (memberService.findByEmail(request.getEmail()).isPresent()) {
+      bindingResult.rejectValue("email", "DUPLICATED_EMAIL", "이미 사용중인 이메일입니다.");
       throw MemberErrorCode.DUPLICATED_EMAIL.defaultException();
     }
 
@@ -79,8 +87,7 @@ public class MemberController {
     
     Member savedMember = memberService.addMember(member);
 
-    MemberResponseDto.Info signupResponse = MemberResponseDto.Info.builder()
-            .memberId(savedMember.getMemberId())
+    MemberResponseDto.Summary signupResponse = MemberResponseDto.Summary.builder()
             .name(savedMember.getName())
             .nickname(savedMember.getNickname())
             .email(savedMember.getEmail())
@@ -97,19 +104,19 @@ public class MemberController {
 
   @Transactional
   @PostMapping("/login")
-  public ResponseEntity<?> login(@RequestBody @Valid MemberLoginRequestDto request, BindingResult bindingResult) {
+  public ResponseEntity<?> login(@RequestBody @Valid MemberRequestDto.Login request, BindingResult bindingResult) {
     if (bindingResult.hasErrors()) {
-      throw MemberErrorCode.INVALID_VALUE.defaultException();
+      throw MemberErrorCode.INVALID_INPUT_VALUE.defaultException();
     }
 
-    Optional<Member> optionalMember = memberService.findByName(request.getName());
-    if (!optionalMember.isPresent()) {
-      throw MemberErrorCode.NOT_FOUND_MEMBER.defaultException();
-    }
-    Member member = optionalMember.get();
+    Member member = memberService.findByName(request.getName()).orElseGet(() -> {
+            bindingResult.rejectValue("name", "LOGIN_FAILED", "아이디가 존재하지 않거나 비밀번호가 틀렸습니다.");
+            throw MemberErrorCode.LOGIN_FAILED.defaultException();
+    });
     
     if (!passwordEncoder.matches(request.getPassword(), member.getPassword())) {
-      throw MemberErrorCode.WRONG_PASSWORD.defaultException();
+      bindingResult.rejectValue("password", "LOGIN_FAILED", "아이디가 존재하지 않거나 비밀번호가 틀렸습니다.");
+      throw MemberErrorCode.LOGIN_FAILED.defaultException();
     }
 
     List<String> roles = member.getRoles().stream().map(Role::getName).collect(Collectors.toList());
@@ -123,11 +130,14 @@ public class MemberController {
             .build();
     refreshTokenService.addRefreshToken(refreshTokenEntity);
 
-    MemberResponseDto.Response loginResponse = MemberResponseDto.Response.builder()
+    MemberResponseDto.Details loginResponse = MemberResponseDto.Details.builder()
             .accessToken(accessToken)
             .refreshToken(refreshToken)
             .memberId(member.getMemberId())
             .name(member.getName())
+            .nickname(member.getNickname())
+            .email(member.getEmail())
+            .createdDate(member.getCreatedDate())
             .build();
     
     log.info("=========================================");
@@ -163,25 +173,20 @@ public class MemberController {
 
     String accessToken = jwtTokenizer.createAccessToken(memberId, name, nickname, email, roles);
 
-    MemberResponseDto.Response loginResponse = MemberResponseDto.Response.builder()
+    MemberResponseDto.Token loginResponse = MemberResponseDto.Token.builder()
+            .memberId(member.getMemberId())
             .accessToken(accessToken)
             .refreshToken(refreshTokenDto.getRefreshToken())
-            .memberId(member.getMemberId())
-            .nickname(nickname)
             .build();
     return new ResponseEntity<>(loginResponse, HttpStatus.OK);
   }
 
   @GetMapping("/details")
   public ResponseEntity<?> getDetails(@IfLogin LoginUserDto loginUserDto) {
-
-    log.info(loginUserDto.toString());
-
     Member member = memberService.findById(loginUserDto.getMemberId());
 
-    MemberResponseDto.Info detailResponse = MemberResponseDto.Info.builder()
+    MemberResponseDto.Summary detailResponse = MemberResponseDto.Summary.builder()
             .name(member.getName())
-            .memberId(member.getMemberId())
             .nickname(member.getNickname())
             .email(member.getEmail())
             .createdDate(member.getCreatedDate())
@@ -191,18 +196,13 @@ public class MemberController {
 
   @Transactional
   @PostMapping("/details")
-  public ResponseEntity<?> updateDetails(@RequestBody @Valid MemberUpdateRequestDto request, BindingResult bindingResult) {
+  public ResponseEntity<?> updateDetails(@RequestBody @Valid MemberRequestDto.Update request, BindingResult bindingResult, @IfLogin LoginUserDto loginUserDto) {
     if (bindingResult.hasErrors()) {
-      throw MemberErrorCode.INVALID_VALUE.defaultException();
+      throw MemberErrorCode.INVALID_INPUT_VALUE.defaultException();
     }
 
     // Member를 불러온다.
-    RefreshToken refreshToken = refreshTokenService.findByRefreshToken(request.getRefreshToken());
-
-    Claims claims = jwtTokenizer.parseRefreshToken(refreshToken.getValue());
-    Long memberId = Long.valueOf(String.valueOf(claims.get("memberId")));
-
-    Member member = memberService.findById(memberId);
+    Member member = memberService.findById(loginUserDto.getMemberId());
 
     // Member를 수정하고 저장
     member.updateDetails(request.getNickname(), request.getEmail());
@@ -214,13 +214,13 @@ public class MemberController {
     String newRefreshToken = jwtTokenizer.createRefreshToken(updatedMember.getMemberId(), updatedMember.getName(), updatedMember.getNickname(), updatedMember.getEmail(), roles);
     RefreshToken newRefreshTokenEntity = RefreshToken.builder()
             .value(newRefreshToken)
-            .memberId(memberId)
+            .memberId(updatedMember.getMemberId())
             .build();
     refreshTokenService.deleteRefreshToken(request.getRefreshToken());
     refreshTokenService.addRefreshToken(newRefreshTokenEntity);
 
     // 수정된 Member, AccessToken, RefreshToken을 보내준다.
-    MemberResponseDto.Response updateResponse = MemberResponseDto.Response.builder()
+    MemberResponseDto.Details updateResponse = MemberResponseDto.Details.builder()
             .accessToken(newAccessToken)
             .refreshToken(newRefreshToken)
             .memberId(updatedMember.getMemberId())
@@ -232,4 +232,106 @@ public class MemberController {
 
     return new ResponseEntity<>(updateResponse, HttpStatus.OK);
   }
+
+  @PostMapping("/valid")
+  public ResponseEntity<?> checkValid(@Valid @RequestBody MemberRequestDto.CheckPassword request, BindingResult bindingResult, @IfLogin LoginUserDto loginUserDto) {
+    if (bindingResult.hasErrors()) {
+      throw MemberErrorCode.INVALID_INPUT_VALUE.defaultException();
+    }
+
+    Member member = memberService.findById(loginUserDto.getMemberId());
+
+    if (!passwordEncoder.matches(request.getPassword(), member.getPassword())) {
+      throw MemberErrorCode.WRONG_PASSWORD.defaultException();
+    }
+
+    return new ResponseEntity<>(HttpStatus.OK);
+  }
+
+  @Transactional
+  @PostMapping("/password")
+  public ResponseEntity<?> alterPassword(@Valid @RequestBody MemberRequestDto.AlterPassword request, BindingResult bindingResult, @IfLogin LoginUserDto loginUserDto) {
+    if (bindingResult.hasErrors()) {
+      throw MemberErrorCode.INVALID_INPUT_VALUE.defaultException();
+    }
+
+    if (!request.getNewPassword().equals(request.getNewPasswordCheck())) {
+      throw MemberErrorCode.NOT_EQUAL_PASSWORD_CHECK.defaultException();
+    }
+
+    Member member = memberService.findById(loginUserDto.getMemberId());
+
+    if (!passwordEncoder.matches(request.getExistingPassword(), member.getPassword())) {
+      throw MemberErrorCode.WRONG_PASSWORD.defaultException();
+    }
+
+    member.updatePassword(request.getNewPassword());
+    Member updatedMember = memberService.addMember(member);
+
+    List<String> roles = updatedMember.getRoles().stream().map(Role::getName).collect(Collectors.toList());
+    String newAccessToken = jwtTokenizer.createAccessToken(updatedMember.getMemberId(), updatedMember.getName(), updatedMember.getNickname(), updatedMember.getEmail(), roles);
+    String newRefreshToken = jwtTokenizer.createRefreshToken(updatedMember.getMemberId(), updatedMember.getName(), updatedMember.getNickname(), updatedMember.getEmail(), roles);
+    RefreshToken newRefreshTokenEntity = RefreshToken.builder()
+            .value(newRefreshToken)
+            .memberId(updatedMember.getMemberId())
+            .build();
+    refreshTokenService.deleteRefreshToken(request.getRefreshToken());
+    refreshTokenService.addRefreshToken(newRefreshTokenEntity);
+
+    MemberResponseDto.Details updateResponse = MemberResponseDto.Details.builder()
+            .accessToken(newAccessToken)
+            .refreshToken(newRefreshToken)
+            .memberId(updatedMember.getMemberId())
+            .name(updatedMember.getName())
+            .nickname(updatedMember.getNickname())
+            .email(updatedMember.getEmail())
+            .createdDate(updatedMember.getCreatedDate())
+            .build();
+
+    return new ResponseEntity<>(updateResponse, HttpStatus.OK);
+  }
+
+  @Transactional
+  @GetMapping("/info")
+  public ResponseEntity<?> lookupMemberInfo(@RequestParam String nickname) {
+
+    Member member = memberService.findByNickname(nickname).orElseThrow(
+            () -> MemberErrorCode.NOT_FOUND_MEMBER.defaultException());
+
+    List<PostResponseDto.Pages> postDtoList = postService.getMemberInfoPosts(member).stream().map(post -> {
+      return PostResponseDto.Pages.builder()
+              .postId(post.getPostId())
+              .postNo(post.getPostNo())
+              .category(post.getCategory())
+              .title(post.getTitle())
+              .writer(member.getNickname())
+              .hits(post.getHits())
+              .createdTime(post.getCreatedTime())
+              .updatedTime(post.getUpdatedTime())
+              .build();
+    }).collect(Collectors.toList());
+
+    List<CommentResponseDto> commentDtoList = commentService.getMemberInfoComments(member).stream().map(comment -> {
+      return CommentResponseDto.builder()
+              .commentId(comment.getCommentId())
+              .writer(member.getNickname())
+              .contents(comment.getContents())
+              .depth(comment.getDepth())
+              .createdTime(comment.getCreatedTime())
+              .updatedTime(comment.getUpdatedTime())
+              .isUpdated(comment.isUpdated())
+              .isDeleted(comment.isDeleted())
+              .build();
+    }).collect(Collectors.toList());
+
+    MemberResponseDto.Info infoResponse = MemberResponseDto.Info.builder()
+            .name(member.getName())
+            .nickname(member.getNickname())
+            .email(member.getEmail())
+            .createdDate(member.getCreatedDate())
+            .memberPostList(postDtoList)
+            .memberCommentList(commentDtoList)
+            .build();
+    return new ResponseEntity<>(infoResponse, HttpStatus.OK);
+  } 
 }

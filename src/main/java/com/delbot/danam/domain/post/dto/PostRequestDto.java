@@ -1,19 +1,45 @@
 package com.delbot.danam.domain.post.dto;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
+import java.util.ArrayList;
+import java.util.List;
 
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-@Data
-@JsonAutoDetect(fieldVisibility = Visibility.ANY)
 public class PostRequestDto {
   //
-  private String title;
+  @Data
+  public static class Post {
+    @NotEmpty(message = "제목을 입력하세요.")
+    @Size(max = 50, message = "제목이 너무 깁니다.")
+    private String title;
 
-  private String contents;
+    @NotEmpty(message = "내용을 입력하세요.")
+    @Size(max = 5000, message = "내용은 5000자 까지 입력가능합니다.")
+    private String contents;
 
-  private boolean isNotice;
+    private boolean isNotice;
 
-  private boolean isCommentable;
+    private boolean isCommentable;
+  }
+
+  @Data
+  public static class Update {
+    @NotEmpty(message = "제목을 입력하세요.")
+    @Size(max = 50, message = "제목이 너무 깁니다.")
+    private String title;
+
+    @NotEmpty(message = "내용을 입력하세요.")
+    @Size(max = 5000, message = "내용은 5000자 까지 입력가능합니다.")
+    private String contents;
+
+    private boolean isNotice;
+
+    private boolean isCommentable;
+
+    private List<String> deleteFileUrls = new ArrayList<>();
+
+    private List<String> deleteImageUrls = new ArrayList<>();
+  }
 }

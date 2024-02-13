@@ -1,7 +1,6 @@
 package com.delbot.danam.domain.post.repository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace.NONE;
 
 import java.util.List;
@@ -23,8 +22,12 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.delbot.danam.config.TestQueryDslConfig;
+import com.delbot.danam.domain.comment.entity.Comment;
+import com.delbot.danam.domain.comment.entity.QComment;
+import com.delbot.danam.domain.comment.repository.CommentRepository;
 import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.member.entity.QMember;
+import com.delbot.danam.domain.member.repository.MemberRepository;
 import com.delbot.danam.domain.post.entity.Post;
 import com.delbot.danam.domain.post.entity.QPost;
 import com.delbot.danam.util.CustomTestUtils;
@@ -45,57 +48,49 @@ public class PostRepositoryTest {
   EntityManager entityManager;
 
   @Autowired
+  MemberRepository memberRepository;
+
+  @Autowired
   PostRepository postRepository;
+
+  @Autowired
+  CommentRepository commentRepository;
 
   Pageable pageable;  
   QPost qPost;
   QMember qMember;
+  QComment qComment;
   JPAQueryFactory queryFactory;
+  Member member1;
+  Member member2;
 
   @BeforeEach
   void setup() {
-    Member mockMember = CustomTestUtils.createMockMember();
-    pageable = PageRequest.of(0, 5, Sort.Direction.DESC, "postNo");
+    Member mockMember1 = CustomTestUtils.createMockMember(1L);
+    Member mockMember2 = CustomTestUtils.createMockMember(2L);
+    member1 = memberRepository.save(mockMember1);
+    member2 = memberRepository.save(mockMember2);
+    pageable = PageRequest.of(0, 10, Sort.Direction.DESC, "postNo");
+
     qPost = QPost.post;
     qMember = QMember.member;
+    qComment = QComment.comment;
+
     queryFactory = new JPAQueryFactory(entityManager);
-    for (Long i = 1L; i <= 20; i++) {
-      postRepository.save(new Post(i, "board A", "title" + i, "Hello World!!", mockMember));
+
+    for (Long l = 1L; l <= 20; l++) {
+      if (l % 3 != 0) {
+        Post tempA = postRepository.save(new Post(l, "board A", "title" + l, "Hello World!!", member1));
+        Post tempB = postRepository.save(new Post(l, "board B", "title" + l, "Hello World!!", member1));
+        commentRepository.save(new Comment("hello board A " + l, member1, tempA, 0, null));
+        commentRepository.save(new Comment("hello board B " + l, member1, tempB, 0, null));
+      } else {
+        Post tempA = postRepository.save(new Post(l, "board A", "title" + l, "Hello World!!", member2));
+        Post tempB = postRepository.save(new Post(l, "board B", "title" + l, "Hello World!!", member2));
+        commentRepository.save(new Comment("hello board A " + l, member2, tempA, 0, null));
+        commentRepository.save(new Comment("hello board B " + l, member2, tempB, 0, null));
+      }
     }
-    for (Long i = 1L; i <= 20; i++) {
-      postRepository.save(new Post(i, "board B", "title" + i, "Hello World!!", mockMember));
-    }
-  }
-
-  @Test
-  @DisplayName("게시글 리스트 불러오기 테스트")
-  void findByCategory_list_success() throws Exception {
-    List<Post> postList = postRepository.findByCategory("board A");
-
-    assertNotNull(postList.get(0).getPostId());
-    assertNotNull(postList.get(0).getUpdatedTime());
-    assertEquals(postList.get(0).getCategory(), postList.get(5).getCategory());
-    assertEquals(20, postList.size());
-  }
-
-  @Test
-  @DisplayName("게시글 페이지 리스트 불러오기 테스트")
-  void findByCategory_page_success() throws Exception {
-    Page<Post> postPage = postRepository.findByCategory("board B", pageable);
-    List<Post> postList = postPage.getContent();
-
-    assertNotNull(postList.get(0));
-    assertEquals(4, postPage.getTotalPages());
-    assertEquals(20, postPage.getTotalElements());
-    assertEquals(pageable, postPage.getPageable());
-  }
-
-  @Test
-  @DisplayName("게시글 불러오기 테스트")
-  void findByCategoryAndPostNo_success() throws Exception {
-    Post post = postRepository.findByCategoryAndPostNo("board A", 10L).get();
-
-    assertEquals(10L, post.getPostNo());
   }
 
   @Test
@@ -115,8 +110,127 @@ public class PostRepositoryTest {
 
   @Test
   @Transactional
-  @DisplayName("검색(모든 조건) 테스트")
+  @DisplayName("모든 게시판 게시글 검색(제목, 내용, 작성자) 테스트")
   void findByAllTarget_success() throws Exception {
+    String keyword = "홍길동0002";
+
+    List<Post> postList = queryFactory.selectFrom(qPost)
+            .where(qPost.title.containsIgnoreCase(keyword)
+                .or(qPost.contents.containsIgnoreCase(keyword))
+                .or(qPost.member.nickname.containsIgnoreCase(keyword)))
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch();
+
+    Page<Post> postPage = new PageImpl<>(postList, pageable, postList.size());
+
+    assertEquals(postRepository.findByAllTarget(keyword, pageable), postPage);
+
+    printPageLog(postPage);
+  }
+
+  @Test
+  @Transactional
+  @DisplayName("모든 게시판 게시글 검색(제목, 내용) 테스트")
+  void findByTitleAndContents_success() throws Exception {
+    String keyword = "5";
+
+    List<Post> postList = queryFactory.selectFrom(qPost)
+            .where(qPost.title.containsIgnoreCase(keyword)
+                .or(qPost.contents.containsIgnoreCase(keyword)))
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch();
+
+    Page<Post> postPage = new PageImpl<>(postList, pageable, postList.size());
+
+    assertEquals(postRepository.findByTitleAndContents(keyword, pageable), postPage);
+
+    printPageLog(postPage);
+  }
+
+  @Test
+  @Transactional
+  @DisplayName("모든 게시판 게시글 검색(제목) 테스트")
+  void findByTitle_success() throws Exception {
+    String keyword = "6";
+
+    List<Post> postList = queryFactory.selectFrom(qPost)
+            .where(qPost.title.containsIgnoreCase(keyword))
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch();
+
+    Page<Post> postPage = new PageImpl<>(postList, pageable, postList.size());
+
+    assertEquals(postRepository.findByTitle(keyword, pageable), postPage);
+
+    printPageLog(postPage);
+  }
+
+  @Test
+  @Transactional
+  @DisplayName("모든 게시판 게시글 검색(내용) 테스트")
+  void findByContents_success() throws Exception {
+    String keyword = "7";
+
+    List<Post> postList = queryFactory.selectFrom(qPost)
+            .where(qPost.contents.containsIgnoreCase(keyword))
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch();
+
+    Page<Post> postPage = new PageImpl<>(postList, pageable, postList.size());
+
+    assertEquals(postRepository.findByContents(keyword, pageable), postPage);
+
+    printPageLog(postPage);
+  }
+
+  @Test
+  @Transactional
+  @DisplayName("모든 게시판 게시글 검색(작성자) 테스트")
+  void findByWriter_success() throws Exception {
+    String keyword = "홍길동0001";
+
+    List<Post> postList = queryFactory.selectFrom(qPost)
+            .join(qPost.member, qMember)
+            .where(qPost.member.nickname.containsIgnoreCase(keyword))
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch();
+
+    Page<Post> postPage = new PageImpl<>(postList, pageable, postList.size());
+
+    assertEquals(postRepository.findByWriter(keyword, pageable), postPage);
+
+    printPageLog(postPage);
+  }
+
+  @Test
+  @Transactional
+  @DisplayName("모든 게시판 게시글 검색(댓글) 테스트")
+  void findByComment_success() throws Exception {
+    String keyword = "A 1";
+
+    List<Post> postList = queryFactory.selectFrom(qPost).distinct()
+            .join(qPost.comments, qComment)
+            .where(qComment.contents.containsIgnoreCase(keyword))
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch();
+
+    Page<Post> postPage = new PageImpl<>(postList, pageable, postList.size());
+
+    assertEquals(postRepository.findByComment(keyword, pageable), postPage);
+
+    printPageLog(postPage);
+  }
+
+  @Test
+  @Transactional
+  @DisplayName("게시글 검색(제목, 내용, 작성자) 테스트")
+  void findByAllTargetWithCategory_success() throws Exception {
     String category = "board A";
     String keyword = "5";
     
@@ -139,8 +253,8 @@ public class PostRepositoryTest {
 
   @Test
   @Transactional
-  @DisplayName("검색(제목&내용) 테스트")
-  void findByTitleAndContents_success() throws Exception {
+  @DisplayName("게시글 검색(제목, 내용) 테스트")
+  void findByTitleAndContentsWithCategory_success() throws Exception {
     String category = "board B";
     String keyword = "1";
 
@@ -161,8 +275,8 @@ public class PostRepositoryTest {
 
   @Test
   @Transactional
-  @DisplayName("검색(제목) 테스트")
-  void findByTitle_success() throws Exception {
+  @DisplayName("게시글 검색(제목) 테스트")
+  void findByTitleWithCategory_success() throws Exception {
     String category = "board A";
     String keyword = "2";
 
@@ -182,8 +296,8 @@ public class PostRepositoryTest {
 
   @Test
   @Transactional
-  @DisplayName("검색(내용) 테스트")
-  void findByContents_success() throws Exception {
+  @DisplayName("게시글 검색(내용) 테스트")
+  void findByContentsWithCategory_success() throws Exception {
     String category = "board A";
     String keyword = "2";
 
@@ -203,8 +317,8 @@ public class PostRepositoryTest {
 
   @Test
   @Transactional
-  @DisplayName("검색(내용) 테스트")
-  void findByWriter_success() throws Exception {
+  @DisplayName("게시글 검색(작성자) 테스트")
+  void findByWriterWithCategory_success() throws Exception {
     String category = "board B";
     String keyword = "3";
 
@@ -222,6 +336,52 @@ public class PostRepositoryTest {
       printPageLog(postPage);
   }
 
+  @Test
+  @Transactional
+  @DisplayName("게시글 검색(댓글) 테스트")
+  void findByCommentWithCategory_success() throws Exception {
+    String keyword = "2";
+    String category = "Board B";
+
+    List<Post> postList = queryFactory.selectFrom(qPost).distinct()
+            .join(qPost.comments, qComment)
+            .where(qPost.category.eq(category)
+                .and(qComment.contents.containsIgnoreCase(keyword)))
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch();
+
+    Page<Post> postPage = new PageImpl<>(postList, pageable, postList.size());
+
+    assertEquals(postRepository.findByComment(category, keyword, pageable), postPage);
+
+    printPageLog(postPage);
+  }
+
+  @Test
+  @Transactional
+  @DisplayName("멤버정보 조회 - 게시글 테스트")
+  void getMemberInfoPosts_success() throws Exception {
+    List<Post> postList = queryFactory.selectFrom(qPost)
+            .leftJoin(qPost.member)
+            .fetchJoin()
+            .where(qPost.member.memberId.eq(member1.getMemberId()))
+            .limit(10)
+            .fetch();
+    
+    assertEquals(postRepository.getMemberInfoPosts(member1), postList);
+
+    log.info("Member ID : {}", member1.getMemberId());
+    for (Post post : postList) {
+      log.info("----------------------------");
+      log.info("Category: {}", post.getCategory());
+      log.info("Number: {}", post.getPostNo());
+      log.info("Title: {}", post.getTitle());
+      log.info("Contents: {}", post.getContents());
+      log.info("Writer: {}", post.getMember().getNickname());
+      log.info("----------------------------");
+    }
+  }
 
   private void printPageLog(Page<Post> postPage) {
     log.info("Page number: {}", postPage.getNumber());
