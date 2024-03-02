@@ -17,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
+import com.delbot.danam.domain.category.Category;
 import com.delbot.danam.domain.post.entity.Post;
 import com.delbot.danam.domain.post.repository.PostRepository;
 import com.delbot.danam.util.CustomTestUtils;
@@ -30,17 +31,17 @@ public class PageServiceTest {
   @Mock
   PostRepository postRepository;
 
-  String category;
+  Category category;
   String keyword;
   Pageable pageable;
   Page<Post> mockPage;
 
   @BeforeEach
   void setup() {
-    category = "fakeCategory";
+    category = CustomTestUtils.categoryMockCategory("fakeBoard");
     keyword = "fakeKeyword";
     pageable = PageRequest.of(0, 5, Sort.Direction.DESC, "postNo");
-    mockPage = CustomTestUtils.generateMockPage(category, pageable);
+    mockPage = CustomTestUtils.generateMockPage(category.getName(), pageable);
   }
 
   @Test

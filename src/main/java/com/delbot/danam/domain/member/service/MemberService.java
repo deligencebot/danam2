@@ -1,7 +1,9 @@
 package com.delbot.danam.domain.member.service;
 
 import java.util.Optional;
+import java.util.List;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,18 @@ public class MemberService {
   //
   private final MemberRepository memberRepository;
   private final RoleRepository roleRepository;
+  private final PasswordEncoder passwordEncoder;
+
+  @Transactional(readOnly = true)
+  public Member login(String name, String password) {
+    Member member = memberRepository.findByName(name).orElseThrow(() -> MemberErrorCode.LOGIN_FAILED.defaultException());
+    if (!passwordEncoder.matches(password, member.getPassword())) {
+      throw MemberErrorCode.LOGIN_FAILED.defaultException();
+    } else if (!member.isEnabled()) {
+      throw MemberErrorCode.BANNED_MEMBER.defaultException();
+    }
+    return member;
+  }
 
   @Transactional
   public Member addMember(Member member) {
@@ -46,5 +60,15 @@ public class MemberService {
   @Transactional(readOnly = true)
   public Optional<Member> findByEmail(String email) {
     return memberRepository.findByEmail(email);
+  }
+
+  @Transactional(readOnly = true)
+  public List<Member> findAllMember() {
+    return memberRepository.findAll();
+  }
+
+  @Transactional
+  public void deleteMember(Member member) {
+    memberRepository.delete(member);
   }
 }

@@ -3,6 +3,7 @@ package com.delbot.danam.domain.post.controller;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.validation.BindingResult;
@@ -24,6 +26,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.delbot.danam.domain.category.Category;
+import com.delbot.danam.domain.category.CategoryService;
 import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.member.service.MemberService;
 import com.delbot.danam.domain.post.dto.PostRequestDto;
@@ -52,6 +56,7 @@ public class PostController {
   private final PostService postService;
   private final PageService pageService;
   private final MemberService memberService;
+  private final CategoryService categoryService;
   private final AwsS3Service awsS3Service;
   private final PostImageRepository postImageRepository;
   private final PostFileRepository postFileRepository;
@@ -87,7 +92,7 @@ public class PostController {
       return PostResponseDto.Pages.builder()
               .postId(post.getPostId())
               .postNo(post.getPostNo())
-              .category(post.getCategory())
+              .category(post.getCategory().getName())
               .title(post.getTitle())
               .writer(post.getMember().getNickname())
               .hits(post.getHits())
@@ -105,32 +110,33 @@ public class PostController {
           @RequestParam(required = false) String keyword, 
           @PageableDefault(page = 1) Pageable pageable) {
     Page<Post> postList = null;
+    Category postCategory = categoryService.findByName(category);
     
     if (target != null && keyword != null) {
       if (target.equals("all")) {
-        postList = pageService.searchByAll(category, keyword, pageable);
+        postList = pageService.searchByAll(postCategory, keyword, pageable);
       } else if(target.equals("title_contents")) {
-        postList = pageService.searchByTitleAndContents(category, keyword, pageable);
+        postList = pageService.searchByTitleAndContents(postCategory, keyword, pageable);
       } else if(target.equals("title")) {
-        postList = pageService.searchByTitle(category, keyword, pageable);
+        postList = pageService.searchByTitle(postCategory, keyword, pageable);
       } else if(target.equals("contents")) {
-        postList = pageService.searchByContents(category, keyword, pageable);
+        postList = pageService.searchByContents(postCategory, keyword, pageable);
       } else if(target.equals("writer")) {
-        postList = pageService.searchByWriter(category, keyword, pageable);
+        postList = pageService.searchByWriter(postCategory, keyword, pageable);
       } else if(target.equals("comment")) {
-        postList = pageService.searchByComment(category, keyword, pageable);
+        postList = pageService.searchByComment(postCategory, keyword, pageable);
       } else {
         throw PostErrorCode.INVALID_SEARCH_REQUEST.defaultException();
       }
     } else {
-      postList = pageService.getPage(category, pageable);
+      postList = pageService.getPage(postCategory, pageable);
     }
 
     Page<PostResponseDto.Pages> pageResponse = postList.map(post -> {
       return PostResponseDto.Pages.builder()
               .postId(post.getPostId())
               .postNo(post.getPostNo())
-              .category(post.getCategory())
+              .category(post.getCategory().getName())
               .title(post.getTitle())
               .writer(post.getMember().getNickname())
               .hits(post.getHits())
@@ -143,13 +149,15 @@ public class PostController {
 
   @GetMapping("/{category}/{no}")
   public ResponseEntity<?> viewPost(@PathVariable String category, @PathVariable Long no) {
-    Post post = postService.getPost(category, no);
+    Category postCategory = categoryService.findByName(category);
+    Post post = postService.getPost(postCategory, no);
     postService.updateHits(post);
 
     PostResponseDto.Detail postResponse = PostResponseDto.Detail.builder().post(post).build();
     return new ResponseEntity<>(postResponse, HttpStatus.OK);
   }
 
+  @PreAuthorize("hasAnyRole('ROLE_USER')")
   @Transactional
   @PutMapping("/{category}/{no}")
   public ResponseEntity<?> updatePost(
@@ -164,7 +172,8 @@ public class PostController {
     }
 
     Member member = memberService.findById(loginUserDto.getMemberId());
-    Post post = postService.getPost(category, no);
+    Category postCategory = categoryService.findByName(category);
+    Post post = postService.getPost(postCategory, no);
 
     if (!member.equals(post.getMember())) {
       throw PostErrorCode.UNAUTHORIZED_ACCESS.defaultException();
@@ -222,6 +231,7 @@ public class PostController {
     return new ResponseEntity<>(postResponse, HttpStatus.OK);
   }
 
+  @PreAuthorize("hasAnyRole('ROLE_USER')")
   @Transactional
   @PostMapping("/{category}/posting")
   public ResponseEntity<?> posting(
@@ -234,14 +244,21 @@ public class PostController {
       throw PostErrorCode.INVALID_INPUT_VALUE.defaultException();
     }
 
+    Category postCategory = categoryService.findByName(category);
+
     Member member = memberService.findById(loginUserDto.getMemberId());
     Post post = Post.builder()
-            .postNo(postService.initPostNo(category))
-            .category(category)
+            .postNo(postService.initPostNo(postCategory))
+            .category(postCategory)
             .title(request.getTitle())
             .contents(request.getContents())
             .member(member)
             .build();
+
+    if (loginUserDto.getRoles().contains("ROLE_ADMIN")) {
+      post.updatePostSetting(request.isNotice(), request.isCommentable());
+    }
+    
     Post savedPost = postService.addPost(post);
 
     if (!CollectionUtils.isEmpty(files)) {
@@ -273,13 +290,15 @@ public class PostController {
     return new ResponseEntity<>(postResponse, HttpStatus.CREATED);
   }
 
+  @PreAuthorize("hasAnyRole('ROLE_USER')")
   @Transactional
   @DeleteMapping("/{category}/{no}")
   public ResponseEntity<?> deletePost(@PathVariable String category, @PathVariable Long no, @IfLogin LoginUserDto loginUserDto) {
     Member member = memberService.findById(loginUserDto.getMemberId());
-    Post post = postService.getPost(category, no);
+    Category postCategory = categoryService.findByName(category);
+    Post post = postService.getPost(postCategory, no);
     
-    if (!member.equals(post.getMember())) {
+    if (!(member.equals(post.getMember()) || loginUserDto.getRoles().contains("ROLE_ADMIN"))) {
       throw PostErrorCode.UNAUTHORIZED_ACCESS.defaultException();
     }
 
@@ -299,6 +318,7 @@ public class PostController {
     return new ResponseEntity<>(HttpStatus.OK);
   }
 
+  @PreAuthorize("hasAnyRole('ROLE_USER')")
   @GetMapping("/download")
   public ResponseEntity<byte[]> downloadFile(@RequestParam String fileUrl) {
     String storedFileName = postFileRepository.findByFileUrl(fileUrl).getStoredFileName();

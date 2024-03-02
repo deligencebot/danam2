@@ -29,6 +29,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.delbot.danam.config.TestSecurityConfig;
+import com.delbot.danam.domain.category.Category;
+import com.delbot.danam.domain.category.CategoryService;
 import com.delbot.danam.domain.comment.dto.CommentRequestDto;
 import com.delbot.danam.domain.comment.entity.Comment;
 import com.delbot.danam.domain.comment.service.CommentService;
@@ -59,6 +61,9 @@ public class CommentControllerTest {
   PostService postService;
 
   @MockBean
+  CategoryService categoryService;
+
+  @MockBean
   IfLoginArgumentResolver ifLoginArgumentResolver;
 
   // http://localhost:8080/comments
@@ -75,7 +80,7 @@ public class CommentControllerTest {
     }
 
     CommentRequestDto.Post request = new CommentRequestDto.Post();
-    request.setCategory(mockPost.getCategory());
+    request.setCategory(mockPost.getCategory().getName());
     request.setPostNo(mockPost.getPostNo());
     request.setContents("new comment!!");
 
@@ -96,7 +101,9 @@ public class CommentControllerTest {
 
     given(memberService.findById(anyLong())).willReturn(mockMember);
 
-    given(postService.getPost(anyString(), anyLong())).willReturn(mockPost);
+    given(categoryService.findByName(anyString())).willReturn(mockPost.getCategory());
+
+    given(postService.getPost(any(Category.class), anyLong())).willReturn(mockPost);
 
     given(commentService.getComments(any(Post.class))).willReturn(commentList);
 
@@ -123,7 +130,7 @@ public class CommentControllerTest {
     JwtAuthenticationToken jwtAuthenticationToken = CustomTestUtils.getLoginUserJwtAuthenticationToken(mockMember);
 
     CommentRequestDto.Post request = new CommentRequestDto.Post();
-    request.setCategory(mockPost.getCategory());
+    request.setCategory(mockPost.getCategory().getName());
     request.setPostNo(mockPost.getPostNo());
     request.setContents("new comment!!");
     request.setParentId(1L);
@@ -169,7 +176,9 @@ public class CommentControllerTest {
 
     given(memberService.findById(anyLong())).willReturn(mockMember);
 
-    given(postService.getPost(anyString(), anyLong())).willReturn(mockPost);
+    given(categoryService.findByName(anyString())).willReturn(mockPost.getCategory());
+
+    given(postService.getPost(any(Category.class), anyLong())).willReturn(mockPost);
 
     given(commentService.getComments(any(Post.class))).willReturn(commentList);
 

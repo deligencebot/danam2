@@ -12,10 +12,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,8 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.delbot.danam.config.TestSecurityConfig;
+import com.delbot.danam.domain.category.Category;
+import com.delbot.danam.domain.category.CategoryService;
 import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.member.service.MemberService;
 import com.delbot.danam.domain.post.dto.PostRequestDto;
@@ -59,6 +62,7 @@ import com.delbot.danam.domain.post.repository.PostFileRepository;
 import com.delbot.danam.domain.post.repository.PostImageRepository;
 import com.delbot.danam.domain.post.service.PageService;
 import com.delbot.danam.domain.post.service.PostService;
+import com.delbot.danam.domain.role.Role;
 import com.delbot.danam.global.common.aws.AwsFileInfo;
 import com.delbot.danam.global.common.aws.AwsS3Service;
 import com.delbot.danam.global.security.jwt.token.JwtAuthenticationToken;
@@ -81,6 +85,9 @@ public class PostControllerTest {
 
   @MockBean
   MemberService memberService;
+
+  @MockBean
+  CategoryService categoryService;
 
   @MockBean
   AwsS3Service awsS3Service;
@@ -139,11 +146,14 @@ public class PostControllerTest {
   @DisplayName("게시글 검색(전체) 테스트")
   void searchCategoryPosts_success() throws Exception {
     String category = "board";
+    Category postCategory = CustomTestUtils.categoryMockCategory(category);
     Page<Post> mockPage = CustomTestUtils.generateMockPage(category, PageRequest.of(0, 5, Sort.Direction.DESC, "postNo"));
 
     Authentication authentication = new TestingAuthenticationToken("user0001", null, "USER");
 
-    given(pageService.getPage(anyString(), any(Pageable.class))).willReturn(mockPage);
+    given(categoryService.findByName(anyString())).willReturn(postCategory);
+
+    given(pageService.getPage(any(Category.class), any(Pageable.class))).willReturn(mockPage);
 
     mockMvc.perform(
             get("/post/{category}", category)
@@ -151,7 +161,7 @@ public class PostControllerTest {
             .andDo(print())
             .andExpect(status().isOk());
 
-    verify(pageService).getPage(anyString(), any(Pageable.class));
+    verify(pageService).getPage(any(Category.class), any(Pageable.class));
   }
 
   // http://localhost:8080/post/{category}?target=all&keyword=aaa (category = board)
@@ -159,11 +169,14 @@ public class PostControllerTest {
   @DisplayName("게시글 검색(모든조건) 테스트")
   void searchCategoryPosts_All_success() throws Exception {
     String category = "board";
+    Category postCategory = CustomTestUtils.categoryMockCategory(category);
     Page<Post> mockPage = CustomTestUtils.generateMockPage(category, PageRequest.of(0, 5, Sort.Direction.DESC, "postNo"));
 
     Authentication authentication = new TestingAuthenticationToken("user0001", null, "USER");
 
-    given(pageService.searchByAll(anyString(), anyString(), any(Pageable.class))).willReturn(mockPage);
+    given(categoryService.findByName(anyString())).willReturn(postCategory);
+
+    given(pageService.searchByAll(any(Category.class), anyString(), any(Pageable.class))).willReturn(mockPage);
 
     mockMvc.perform(
             get("/post/{category}", category)
@@ -173,7 +186,7 @@ public class PostControllerTest {
             .andDo(print())
             .andExpect(status().isOk());
 
-    verify(pageService).searchByAll(anyString(), anyString(), any(Pageable.class));
+    verify(pageService).searchByAll(any(Category.class), anyString(), any(Pageable.class));
   }
 
   // http://localhost:8080/post/{category}/{no} (category = board, no = 1)
@@ -181,12 +194,15 @@ public class PostControllerTest {
   @DisplayName("게시글 조회 테스트")
   void viewPost_success() throws Exception {
     String category = "board";
+    Category postCategory = CustomTestUtils.categoryMockCategory(category);
     Long no = 1L;
     Authentication authentication = new TestingAuthenticationToken("user0001", null, "USER");
 
     Post mockPost = CustomTestUtils.createMockPost(new Member("user0001", "password", "홍길동", "user0001@gmail.com"));
 
-    given(postService.getPost(anyString(), anyLong())).willReturn(mockPost);
+    given(categoryService.findByName(anyString())).willReturn(postCategory);
+
+    given(postService.getPost(any(Category.class), anyLong())).willReturn(mockPost);
 
     mockMvc.perform(
             get("/post/{category}/{no}", category, no)
@@ -202,7 +218,7 @@ public class PostControllerTest {
             .andExpect(jsonPath("$.hits").exists())
             .andExpect(jsonPath("$.createdTime").exists());
 
-    verify(postService).getPost(anyString(), anyLong());
+    verify(postService).getPost(any(Category.class), anyLong());
   }
 
   // http://localhost:8080/post/{category}/{no} (category = board, no = 1)
@@ -210,13 +226,16 @@ public class PostControllerTest {
   @DisplayName("게시글 조회 테스트")
   void updatePost_success() throws Exception {
     String category = "board";
+    Category postCategory = CustomTestUtils.categoryMockCategory(category);
     Long no = 1L;
     Authentication authentication = new TestingAuthenticationToken("user0001", null, "USER");
 
     Member mockMember = CustomTestUtils.createMockMember();
     Post mockPost = CustomTestUtils.createMockPost(mockMember);
 
-    given(postService.getPost(anyString(), anyLong())).willReturn(mockPost);
+    given(categoryService.findByName(anyString())).willReturn(postCategory);
+
+    given(postService.getPost(any(Category.class), anyLong())).willReturn(mockPost);
 
     doNothing().when(postService).updateHits(any(Post.class));
 
@@ -243,6 +262,8 @@ public class PostControllerTest {
   void updatedPost_success() throws Exception {
     Member mockMember = CustomTestUtils.createMockMember();
     Post mockPost = CustomTestUtils.createMockPost(mockMember);
+    String category = "board";
+    Category postCategory = CustomTestUtils.categoryMockCategory(category);
 
     MockMultipartFile multipartFile3 = new MockMultipartFile("images", "image3.jpg", MediaType.IMAGE_JPEG_VALUE, "image".getBytes(StandardCharsets.UTF_8));
 
@@ -252,7 +273,6 @@ public class PostControllerTest {
 
     AwsFileInfo fileInfo3 = new AwsFileInfo(mockPostImage3.getImageUrl(), mockPostImage3.getStoredFileName());
 
-    String category = "board";
     Long no = 1L;
     PostRequestDto.Update updateRequestDto = new PostRequestDto.Update();
     updateRequestDto.setTitle("updated title");
@@ -285,7 +305,9 @@ public class PostControllerTest {
 
     given(memberService.findById(anyLong())).willReturn(mockMember);
 
-    given(postService.getPost(anyString(), anyLong())).willReturn(mockPost);
+    given(categoryService.findByName(anyString())).willReturn(postCategory);
+
+    given(postService.getPost(any(Category.class), anyLong())).willReturn(mockPost);
 
     given(postService.addPost(any())).willReturn(mockPost);
 
@@ -293,7 +315,7 @@ public class PostControllerTest {
 
     given(awsS3Service.uploadFile(any(MultipartFile.class))).willReturn(fileInfo3);
 
-    given(postService.getPost(anyString(), anyLong())).willReturn(mockResponsePost);
+    given(postService.getPost(any(Category.class), anyLong())).willReturn(mockResponsePost);
 
     MockMultipartHttpServletRequestBuilder builder = 
             MockMvcRequestBuilders.multipart("/post/{category}/{no}", category, no);
@@ -393,7 +415,7 @@ public class PostControllerTest {
     given(postImageRepository.save(mockPostImage1)).willReturn(mockPostImage1);
     given(postImageRepository.save(mockPostImage2)).willReturn(mockPostImage2);
 
-    given(postService.getPost(anyString(), anyLong())).willReturn(mockResponsePost);
+    given(postService.getPost(any(Category.class), anyLong())).willReturn(mockResponsePost);
 
     mockMvc.perform(
             multipart("/post/{category}/posting", category)
@@ -431,15 +453,59 @@ public class PostControllerTest {
 
     given(memberService.findById(anyLong())).willReturn(mockMember);
 
-    given(postService.getPost(anyString(), anyLong())).willReturn(mockPost);
+    given(categoryService.findByName(anyString())).willReturn(mockPost.getCategory());
+
+    given(postService.getPost(any(Category.class), anyLong())).willReturn(mockPost);
 
     mockMvc.perform(
-            delete("/post/{category}/{no}", mockPost.getCategory(), mockPost.getPostNo())
+            delete("/post/{category}/{no}", mockPost.getCategory().getName(), mockPost.getPostNo())
             .with(authentication(jwtAuthenticationToken)))
             .andDo(print())
             .andExpect(status().isOk()); 
 
-    verify(postService).getPost(anyString(), anyLong());
+    verify(postService).getPost(any(Category.class), anyLong());
+  }
+
+  // http://localhost:8080/post/{category}/{no} (category = board, no = 1)
+  @Test
+  @DisplayName("게시글 삭제 테스트 - admin")
+  void deletePost_admin_success() throws Exception {
+    Member mockAdmin = CustomTestUtils.createMockMember();
+    Role adminRole = new Role(2L, "ROLE_ADMIN");
+    mockAdmin.addRole(adminRole);
+    JwtAuthenticationToken jwtAuthenticationToken = CustomTestUtils.getLoginUserJwtAuthenticationToken(mockAdmin);
+
+    Role role = new Role(1L, "ROLE_USER");
+    Set<Role> roles = Set.of(role);
+
+    Member mockMember = new Member(
+            2L,
+            "mockUser",
+            "asdf1234!",
+            "MockUser",
+            "mockuser@google.com",
+            LocalDateTime.now().truncatedTo(ChronoUnit.DAYS),
+            roles,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            true
+    );
+
+    Post mockPost = CustomTestUtils.createMockPost(mockMember);
+
+    given(memberService.findById(anyLong())).willReturn(mockAdmin);
+
+    given(categoryService.findByName(anyString())).willReturn(mockPost.getCategory());
+
+    given(postService.getPost(any(Category.class), anyLong())).willReturn(mockPost);
+
+    mockMvc.perform(
+            delete("/post/{category}/{no}", mockPost.getCategory().getName(), mockPost.getPostNo())
+            .with(authentication(jwtAuthenticationToken)))
+            .andDo(print())
+            .andExpect(status().isOk()); 
+
+    verify(postService).getPost(any(Category.class), anyLong());
   }
 
   // http://localhost:8080/post/download?fileUrl=asdf1234

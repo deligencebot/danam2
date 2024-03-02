@@ -3,7 +3,6 @@ package com.delbot.danam.domain.post.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
@@ -22,6 +21,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.delbot.danam.domain.category.Category;
 import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.post.entity.Post;
 import com.delbot.danam.domain.post.repository.PostRepository;
@@ -37,10 +37,12 @@ public class PostServiceTest {
   PostRepository postRepository;
 
   Post mockPost;
+  Category category;
 
   @BeforeEach
   void setup() {
     mockPost = CustomTestUtils.createMockPost(mock(Member.class));
+    category = mockPost.getCategory();
   }
 
   @Test
@@ -53,7 +55,7 @@ public class PostServiceTest {
 
     assertEquals(mockPost.getPostId(), post.getPostId());
 
-    verify(postRepository).findByCategoryAndPostNo(anyString(), anyLong());
+    verify(postRepository).findByCategoryAndPostNo(any(Category.class), anyLong());
   }
 
   @Test
@@ -91,7 +93,7 @@ public class PostServiceTest {
   @Test
   @DisplayName("게시글 번호 초기화 테스트")
   void initPostNo_success() throws Exception {
-    String category = "fakeBoard";
+    Category category = CustomTestUtils.categoryMockCategory("board");
 
     given(postRepository.findByCategory(eq(category)))
             .willReturn(Arrays.asList(
@@ -115,9 +117,9 @@ public class PostServiceTest {
   @DisplayName("회원게시글 불러오기 테스트")
   void getMemberInfoPosts_success() throws Exception {
     given(postRepository.getMemberInfoPosts(any(Member.class))).willReturn(Arrays.asList(
-            new Post(1L, "category", "title1", "hello", mock(Member.class)),
-            new Post(2L, "category", "title1", "hello", mock(Member.class)),
-            new Post(3L, "category", "title1", "hello", mock(Member.class))
+            new Post(1L, category, "title1", "hello", mock(Member.class)),
+            new Post(2L, category, "title1", "hello", mock(Member.class)),
+            new Post(3L, category, "title1", "hello", mock(Member.class))
     ));
 
     postRepository.getMemberInfoPosts(mock(Member.class));

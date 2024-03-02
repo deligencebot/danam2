@@ -19,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-public class JwtAuthenticationProvider implements AuthenticationProvider{
+public class JwtAuthenticationProvider implements AuthenticationProvider {
   //
   private final JwtTokenizer jwtTokenizer;
 

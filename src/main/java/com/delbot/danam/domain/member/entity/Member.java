@@ -7,13 +7,14 @@ import java.util.List;
 import java.util.Set;
 
 import org.hibernate.annotations.CreationTimestamp;
-
 import com.delbot.danam.domain.comment.entity.Comment;
 import com.delbot.danam.domain.post.entity.Post;
 import com.delbot.danam.domain.role.Role;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -55,17 +56,19 @@ public class Member {
   @CreationTimestamp
   private LocalDateTime createdDate;
 
-  @ManyToMany
+  @ManyToMany(fetch = FetchType.LAZY)
   @JoinTable(name = "tb_member_role",
           joinColumns = @JoinColumn(name = "member_id"),
           inverseJoinColumns = @JoinColumn(name = "role_id"))
   private Set<Role> roles = new HashSet<>();
 
-  @OneToMany(mappedBy = "member")
+  @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Post> postList = new ArrayList<>();
 
-  @OneToMany(mappedBy = "member")
+  @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Comment> commentList = new ArrayList<>();
+
+  private boolean isEnabled;
 
   @Builder
   public Member(String name, String password, String nickname, String email) {
@@ -73,6 +76,7 @@ public class Member {
     this.password = password;
     this.nickname = nickname;
     this.email = email;
+    this.isEnabled = true;
   }
 
   @Override
@@ -87,7 +91,11 @@ public class Member {
   }
 
   public void addRole(Role role) {
-    roles.add(role);
+    this.roles.add(role);
+  }
+
+  public void removeRole(Role role) {
+    this.roles.remove(role);
   }
 
   public void updateDetails(String nickname, String email) {
@@ -97,5 +105,9 @@ public class Member {
 
   public void updatePassword(String password) {
     this.password = password;
+  }
+
+  public void updateEnabled(boolean isEnabled) {
+    this.isEnabled = isEnabled;
   }
 }

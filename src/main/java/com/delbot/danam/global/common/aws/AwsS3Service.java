@@ -14,6 +14,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.util.IOUtils;
+import com.delbot.danam.global.common.exception.GlobalErrorCode;
 import com.delbot.danam.global.util.CommonUtils;
 
 import lombok.RequiredArgsConstructor;
@@ -53,7 +54,7 @@ public class AwsS3Service {
 
   private void validateFileExists(MultipartFile multipartFile) {
     if (multipartFile.isEmpty()) {
-      throw new RuntimeException("file is empty");
+      throw GlobalErrorCode.FILE_EMPTY.defaultException();
     }
   }
 }

@@ -3,7 +3,6 @@ package com.delbot.danam.domain.post.repository;
 import static com.delbot.danam.domain.member.entity.QMember.member;
 import static com.delbot.danam.domain.post.entity.QPost.post;
 import static com.delbot.danam.domain.comment.entity.QComment.comment;
-
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -11,6 +10,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import com.delbot.danam.domain.category.Category;
 import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.post.entity.Post;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -96,7 +96,7 @@ public class PostCustomRepositoryImpl implements PostCustomRepository {
   }
 
   @Override
-  public Page<Post> findByAllTarget(String category, String keyword, Pageable pageable) {
+  public Page<Post> findByAllTarget(Category category, String keyword, Pageable pageable) {
     List<Post> result = queryFactory
               .selectFrom(post)
               .join(post.member, member)
@@ -111,7 +111,7 @@ public class PostCustomRepositoryImpl implements PostCustomRepository {
   }
 
   @Override
-  public Page<Post> findByTitleAndContents(String category, String keyword, Pageable pageable) {
+  public Page<Post> findByTitleAndContents(Category category, String keyword, Pageable pageable) {
     List<Post> result = queryFactory
             .selectFrom(post)
             .where(post.category.eq(category)
@@ -124,7 +124,7 @@ public class PostCustomRepositoryImpl implements PostCustomRepository {
   }
 
   @Override
-  public Page<Post> findByTitle(String category, String keyword, Pageable pageable) {
+  public Page<Post> findByTitle(Category category, String keyword, Pageable pageable) {
     List<Post> result = queryFactory
             .selectFrom(post)
             .where(post.category.eq(category)
@@ -136,7 +136,7 @@ public class PostCustomRepositoryImpl implements PostCustomRepository {
   }
 
   @Override
-  public Page<Post> findByContents(String category, String keyword, Pageable pageable) {
+  public Page<Post> findByContents(Category category, String keyword, Pageable pageable) {
     List<Post> result = queryFactory
             .selectFrom(post)
             .where(post.category.eq(category)
@@ -148,7 +148,7 @@ public class PostCustomRepositoryImpl implements PostCustomRepository {
   }
 
   @Override
-  public Page<Post> findByWriter(String category, String keyword, Pageable pageable) {
+  public Page<Post> findByWriter(Category category, String keyword, Pageable pageable) {
     List<Post> result = queryFactory
             .selectFrom(post)
             .join(post.member, member)
@@ -161,7 +161,7 @@ public class PostCustomRepositoryImpl implements PostCustomRepository {
   }
 
   @Override
-  public Page<Post> findByComment(String category, String keyword, Pageable pageable) {
+  public Page<Post> findByComment(Category category, String keyword, Pageable pageable) {
     List<Post> result = queryFactory
             .selectFrom(post).distinct()
             .join(post.comments, comment)

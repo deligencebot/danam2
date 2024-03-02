@@ -43,5 +43,4 @@ public enum PostErrorCode implements ErrorCode {
   public RuntimeException defaultException(Throwable cause) {
     return new PostException(this, cause);
   }
-  
 }

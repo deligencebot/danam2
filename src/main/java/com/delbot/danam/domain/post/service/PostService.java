@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.delbot.danam.domain.category.Category;
 import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.post.entity.Post;
 import com.delbot.danam.domain.post.exception.PostErrorCode;
@@ -20,7 +21,7 @@ public class PostService {
   private final PostRepository postRepository;
 
   @Transactional(readOnly = true)
-  public Post getPost(String category, Long postNo) {
+  public Post getPost(Category category, Long postNo) {
     Post post = postRepository.findByCategoryAndPostNo(category, postNo).orElseThrow(
       () -> PostErrorCode.NOT_FOUND_POST.defaultException()
     );
@@ -42,7 +43,7 @@ public class PostService {
     postRepository.updateHits(post.getPostId());
   }
 
-  public Long initPostNo(String category) {
+  public Long initPostNo(Category category) {
     return postRepository.findByCategory(category)
             .stream()
             .map(Post::getPostNo)

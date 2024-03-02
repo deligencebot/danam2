@@ -7,11 +7,14 @@ import java.util.List;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.delbot.danam.domain.category.Category;
 import com.delbot.danam.domain.comment.entity.Comment;
 import com.delbot.danam.domain.member.entity.Member;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -39,7 +42,9 @@ public class Post {
 
   private Long postNo;
 
-  private String category;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "category_id")
+  private Category category;
 
   private String title;
 
@@ -59,21 +64,21 @@ public class Post {
   @UpdateTimestamp
   private LocalDateTime updatedTime;
 
-  @ManyToOne
+  @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "member_id")
   private Member member;
 
-  @OneToMany(mappedBy = "post", orphanRemoval = true)
+  @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Comment> comments = new ArrayList<>();
 
-  @OneToMany(mappedBy = "post", orphanRemoval = true)
+  @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<PostImage> postImages = new ArrayList<>();
 
-  @OneToMany(mappedBy = "post", orphanRemoval = true)
+  @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<PostFile> postFiles = new ArrayList<>();
 
   @Builder
-  public Post(Long postNo, String category, String title, String contents, Member member) {
+  public Post(Long postNo, Category category, String title, String contents, Member member) {
     this.postNo = postNo;
     this.category = category;
     this.title = title;
@@ -89,5 +94,10 @@ public class Post {
     this.title = title;
     this.contents = contents;
     this.isUpdated = true;
+  }
+
+  public void updatePostSetting(boolean isNotice, boolean isCommentable) {
+    this.isNotice = isNotice;
+    this.isCommentable = isCommentable;
   }
 }

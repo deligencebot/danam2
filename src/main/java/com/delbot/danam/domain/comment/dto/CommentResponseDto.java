@@ -39,7 +39,7 @@ public class CommentResponseDto {
     this.isDeleted = isDeleted;
   }
 
-  public static CommentResponseDto convertToDto(Comment comment) {
+  public static CommentResponseDto mapper(Comment comment) {
     return comment.isDeleted() ?
     CommentResponseDto.builder()
             .commentId(comment.getCommentId())
@@ -64,12 +64,12 @@ public class CommentResponseDto {
             .build();
   }
 
-  public static List<CommentResponseDto> mappingDto(List<Comment> commentList) {
+  public static List<CommentResponseDto> listMapper(List<Comment> commentList) {
     List<CommentResponseDto> commentDtoList = new ArrayList<>();
     Map<Long, CommentResponseDto> commentDtoHashMap = new HashMap<>();
-
+    
     commentList.forEach(comment -> {
-      CommentResponseDto commentDto = CommentResponseDto.convertToDto(comment);
+      CommentResponseDto commentDto = CommentResponseDto.mapper(comment);
       commentDtoHashMap.put(commentDto.getCommentId(), commentDto);
 
       if (comment.getParent() != null) {

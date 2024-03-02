@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.delbot.danam.global.common.exception.GlobalErrorCode;
 import com.delbot.danam.global.config.RecaptchaConfig;
 
 @RestController
@@ -26,7 +27,7 @@ public class RecaptchaController {
       return new ResponseEntity<>(verifyResult, HttpStatus.OK);
     } catch (IOException e) {
       e.printStackTrace();
-      throw new RuntimeException();
+      throw GlobalErrorCode.RECAPTCHA_AUTHENTICATION_FAILURE.defaultException();
     }
   }
 }

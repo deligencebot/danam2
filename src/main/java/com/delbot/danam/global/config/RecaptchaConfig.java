@@ -12,6 +12,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import com.delbot.danam.global.common.exception.GlobalErrorCode;
 import com.google.gson.JsonParser;
 
 @Configuration
@@ -60,7 +61,7 @@ public class RecaptchaConfig {
       }
     } catch (Exception e) {
       e.printStackTrace();
-      return false;
+      throw GlobalErrorCode.RECAPTCHA_SERVER_ERROR.defaultException();
     } 
   }
 }

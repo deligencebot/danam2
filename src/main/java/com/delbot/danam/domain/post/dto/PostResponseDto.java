@@ -34,7 +34,7 @@ public class PostResponseDto {
     public Detail(Post post) {
       this.postId = post.getPostId();
       this.postNo = post.getPostNo();
-      this.category = post.getCategory();
+      this.category = post.getCategory().getName();
       this.title = post.getTitle();
       this.contents = post.getContents();
       this.writer = post.getMember().getNickname();

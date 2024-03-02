@@ -3,6 +3,7 @@ package com.delbot.danam.global.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
   //
@@ -34,10 +36,7 @@ public class SecurityConfig {
         .formLogin(formLogin -> formLogin.disable())
         .authorizeHttpRequests(authroize -> authroize
             .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
-            .requestMatchers("/members/signup", "/members/login", "/members/refreshToken").permitAll()
-            // .requestMatchers("/api/v1/members/**").hasAnyRole("USER")
-            // .requestMatchers("/api/v1/manager/**").hasAnyRole("MANAGER")
-            // .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN")
+            .requestMatchers("/admin/**").hasAnyRole("ADMIN")
             .anyRequest().permitAll()
         )
         .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(customAuthenticationEntryPoint))

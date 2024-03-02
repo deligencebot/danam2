@@ -11,7 +11,7 @@ import jakarta.ws.rs.core.NoContentException;
 public final class GlobalExceptionHandler {
 	//
     @ExceptionHandler(CustomException.class)
-    public ResponseEntity<ApiError> handleMemberException(CustomException e) {
+    public ResponseEntity<ApiError> handleCustomException(CustomException e) {
         ErrorCode errorCode = e.getErrorCode();
         HttpStatus httpStatus = errorCode.defaultHttpStatus();
         ApiError apiError = ApiError.of(errorCode);

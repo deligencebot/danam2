@@ -132,9 +132,7 @@ public class MemberControllerTest {
     request.setName(mockMember.getName());
     request.setPassword(mockMember.getPassword());
 
-    given(memberService.findByName(anyString())).willReturn(Optional.of(mockMember));
-
-    given(passwordEncoder.matches(anyString(), anyString())).willReturn(true);
+    given(memberService.login(anyString(), anyString())).willReturn((mockMember));
 
     given(jwtTokenizer.createAccessToken(anyLong(), anyString(), anyString(), anyString(), anyList()))
             .willReturn(sampleAccessToken);
@@ -388,7 +386,7 @@ public class MemberControllerTest {
       postList.add(new Post(
               l, 
               l, 
-              "mockCategory", 
+              CustomTestUtils.categoryMockCategory("board"), 
               "Title" + String.valueOf(l), 
               "Hello!!", 
               0L,

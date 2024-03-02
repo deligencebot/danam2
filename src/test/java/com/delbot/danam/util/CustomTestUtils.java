@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import com.delbot.danam.domain.category.Category;
 import com.delbot.danam.domain.comment.entity.Comment;
 import com.delbot.danam.domain.member.entity.Member;
 import com.delbot.danam.domain.post.entity.Post;
@@ -31,7 +32,8 @@ public class CustomTestUtils {
   //
     public static Member createMockMember() {
     Role role = new Role(1L, "ROLE_USER");
-    Set<Role> roles = Set.of(role);
+    Set<Role> roles = new HashSet<>();
+    roles.add(role);
 
     return new Member(
             1L, 
@@ -39,16 +41,18 @@ public class CustomTestUtils {
             "asdf1234!", 
             "홍길동0001a", 
             "user0001@google.com", 
-            LocalDateTime.now().truncatedTo(ChronoUnit.DAYS), 
-            roles, 
+            LocalDateTime.now().truncatedTo(ChronoUnit.DAYS),
+            roles,
             new ArrayList<>(),
-            new ArrayList<>()
+            new ArrayList<>(),
+            true
     );
   }
 
   public static Member createMockMember(Long id) {
     Role role = new Role(1L, "ROLE_USER");
-    Set<Role> roles = Set.of(role);
+    Set<Role> roles = new HashSet<>();
+    roles.add(role);
 
     return new Member(
             id, 
@@ -59,7 +63,8 @@ public class CustomTestUtils {
             LocalDateTime.now().truncatedTo(ChronoUnit.DAYS), 
             roles, 
             new ArrayList<>(),
-            new ArrayList<>()
+            new ArrayList<>(),
+            true
     );
   }
 
@@ -67,7 +72,7 @@ public class CustomTestUtils {
     return new Post(
             1L, 
             1L, 
-            "board", 
+            CustomTestUtils.categoryMockCategory("Board"), 
             "Fake Title", 
             "Hello World!", 
             0L,
@@ -90,7 +95,7 @@ public class CustomTestUtils {
       postList.add(new Post(
               i, 
               i, 
-              category, 
+              CustomTestUtils.categoryMockCategory(category), 
               "Title" + String.valueOf(i), 
               "Hello!!", 
               0L,
@@ -150,6 +155,16 @@ public class CustomTestUtils {
             null);
   }
 
+  public static Category categoryMockCategory(String name) {
+    return new Category(
+            1L, 
+            name, 
+            true, 
+            null, 
+            null,
+            null);
+  }
+
   public static LoginUserDto getLoginUserDto(Member member) {
     LoginUserDto loginUserDto = new LoginUserDto();
     loginUserDto.setMemberId(member.getMemberId());
@@ -166,6 +181,23 @@ public class CustomTestUtils {
     for (Role role : member.getRoles()) {
       authorities.add(new SimpleGrantedAuthority(role.getName()));
     }
+
+    LoginInfoDto loginInfoDto = new LoginInfoDto();
+    loginInfoDto.setMemberId(member.getMemberId());
+    loginInfoDto.setName(member.getName());
+    loginInfoDto.setNickname(member.getNickname());
+
+    return new JwtAuthenticationToken(authorities, loginInfoDto, null);
+  }
+
+  public static JwtAuthenticationToken getAdminJwtAuthenticationToken(Member member) {
+    Set<GrantedAuthority> authorities = new HashSet<>();
+    
+    for (Role role : member.getRoles()) {
+      authorities.add(new SimpleGrantedAuthority(role.getName()));
+    }
+
+    authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
 
     LoginInfoDto loginInfoDto = new LoginInfoDto();
     loginInfoDto.setMemberId(member.getMemberId());

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.delbot.danam.domain.category.Category;
+import com.delbot.danam.domain.category.CategoryService;
 import com.delbot.danam.domain.comment.dto.CommentRequestDto;
 import com.delbot.danam.domain.comment.dto.CommentResponseDto;
 import com.delbot.danam.domain.comment.entity.Comment;
@@ -35,15 +38,18 @@ public class CommentController {
   private final CommentService commentService;
   private final MemberService memberService;
   private final PostService postService;
+  private final CategoryService categoryService;
 
+  @PreAuthorize("hasAnyRole('ROLE_USER')")
   @PostMapping
-  public ResponseEntity<?> writeComment(@Valid @RequestBody CommentRequestDto.Post request, BindingResult bindingResult, @IfLogin LoginUserDto loginUserDto) {
+  public ResponseEntity<?> writeComments(@Valid @RequestBody CommentRequestDto.Post request, BindingResult bindingResult, @IfLogin LoginUserDto loginUserDto) {
     if (bindingResult.hasErrors()) {
       throw CommentErrorCode.INVALID_INPUT_VALUE.defaultException();
     }
 
     Member member = memberService.findById(loginUserDto.getMemberId());
-    Post post = postService.getPost(request.getCategory(), request.getPostNo());
+    Category category = categoryService.findByName(request.getCategory());
+    Post post = postService.getPost(category, request.getPostNo());
     int depth = 0;
     Comment parent = null;
     if (request.getParentId() != null) {
@@ -61,11 +67,12 @@ public class CommentController {
 
     commentService.saveComment(comment);
 
-    List<CommentResponseDto> response = CommentResponseDto.mappingDto(commentService.getComments(post));
+    List<CommentResponseDto> response = CommentResponseDto.listMapper(commentService.getComments(post));
 
     return new ResponseEntity<>(response, HttpStatus.CREATED);
   }
 
+  @PreAuthorize("hasAnyRole('ROLE_USER')")
   @PutMapping
   public ResponseEntity<?> updateComment(@Valid @RequestBody CommentRequestDto.Update request, BindingResult bindingResult, @IfLogin LoginUserDto loginUserDto) {
     if (bindingResult.hasErrors()) {
@@ -82,22 +89,23 @@ public class CommentController {
 
     commentService.saveComment(comment);
 
-    List<CommentResponseDto> response = CommentResponseDto.mappingDto(commentService.getComments(comment.getPost()));
+    List<CommentResponseDto> response = CommentResponseDto.listMapper(commentService.getComments(comment.getPost()));
 
     return new ResponseEntity<>(response, HttpStatus.OK);
   }
 
+  @PreAuthorize("hasAnyRole('ROLE_USER')")
   @DeleteMapping
   public ResponseEntity<?> deleteComment(@RequestBody CommentRequestDto.Delete request, @IfLogin LoginUserDto loginUserDto) {
     Comment comment = commentService.findById(request.getCommentId());
 
-    if (comment.getMember().getMemberId() != loginUserDto.getMemberId()) {
+    if (!(loginUserDto.getMemberId().equals(comment.getMember().getMemberId()) || loginUserDto.getRoles().contains("ROLE_ADMIN"))) {
       throw CommentErrorCode.UNAUTHORIZED_ACCESS.defaultException();
     }
 
     commentService.deleteComment(comment);
 
-    List<CommentResponseDto> response = CommentResponseDto.mappingDto(commentService.getComments(comment.getPost()));
+    List<CommentResponseDto> response = CommentResponseDto.listMapper(commentService.getComments(comment.getPost()));
 
     return new ResponseEntity<>(response, HttpStatus.OK);
   }

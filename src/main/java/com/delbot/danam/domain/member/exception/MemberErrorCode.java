@@ -9,11 +9,12 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public enum MemberErrorCode implements ErrorCode{
+public enum MemberErrorCode implements ErrorCode {
   // 400 BAD_REQUEST
   INVALID_INPUT_VALUE("유효하지 않은 값이 입력되었습니다.", HttpStatus.BAD_REQUEST),
   NOT_EQUAL_PASSWORD_CHECK("비밀번호가 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
   // 401 UNAUTHORIZED
+  BANNED_MEMBER("차단된 회원입니다.", HttpStatus.UNAUTHORIZED),
   LOGIN_FAILED("아이디가 존재하지 않거나 비밀번호가 틀렸습니다.", HttpStatus.UNAUTHORIZED),
   WRONG_PASSWORD("비밀번호가 틀렸습니다.", HttpStatus.UNAUTHORIZED),
   // 404 NOT_FOUND

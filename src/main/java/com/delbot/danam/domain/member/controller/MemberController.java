@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
@@ -109,15 +110,7 @@ public class MemberController {
       throw MemberErrorCode.INVALID_INPUT_VALUE.defaultException();
     }
 
-    Member member = memberService.findByName(request.getName()).orElseGet(() -> {
-            bindingResult.rejectValue("name", "LOGIN_FAILED", "아이디가 존재하지 않거나 비밀번호가 틀렸습니다.");
-            throw MemberErrorCode.LOGIN_FAILED.defaultException();
-    });
-    
-    if (!passwordEncoder.matches(request.getPassword(), member.getPassword())) {
-      bindingResult.rejectValue("password", "LOGIN_FAILED", "아이디가 존재하지 않거나 비밀번호가 틀렸습니다.");
-      throw MemberErrorCode.LOGIN_FAILED.defaultException();
-    }
+    Member member = memberService.login(request.getName(), request.getPassword());
 
     List<String> roles = member.getRoles().stream().map(Role::getName).collect(Collectors.toList());
 
@@ -153,6 +146,7 @@ public class MemberController {
   @DeleteMapping("/logout")
   public ResponseEntity<?> logout(@RequestBody RefreshTokenDto refreshTokenDto) {
     refreshTokenService.deleteRefreshToken(refreshTokenDto.getRefreshToken());
+
     return new ResponseEntity<>(HttpStatus.OK);
   }
 
@@ -178,9 +172,11 @@ public class MemberController {
             .accessToken(accessToken)
             .refreshToken(refreshTokenDto.getRefreshToken())
             .build();
+
     return new ResponseEntity<>(loginResponse, HttpStatus.OK);
   }
 
+  @PreAuthorize("hasAnyRole('ROLE_USER')")
   @GetMapping("/details")
   public ResponseEntity<?> getDetails(@IfLogin LoginUserDto loginUserDto) {
     Member member = memberService.findById(loginUserDto.getMemberId());
@@ -191,9 +187,11 @@ public class MemberController {
             .email(member.getEmail())
             .createdDate(member.getCreatedDate())
             .build();
+
     return new ResponseEntity<>(detailResponse, HttpStatus.OK);
   }
 
+  @PreAuthorize("hasAnyRole('ROLE_USER')")
   @Transactional
   @PostMapping("/details")
   public ResponseEntity<?> updateDetails(@RequestBody @Valid MemberRequestDto.Update request, BindingResult bindingResult, @IfLogin LoginUserDto loginUserDto) {
@@ -233,6 +231,7 @@ public class MemberController {
     return new ResponseEntity<>(updateResponse, HttpStatus.OK);
   }
 
+  @PreAuthorize("hasAnyRole('ROLE_USER')")
   @PostMapping("/valid")
   public ResponseEntity<?> checkValid(@Valid @RequestBody MemberRequestDto.CheckPassword request, BindingResult bindingResult, @IfLogin LoginUserDto loginUserDto) {
     if (bindingResult.hasErrors()) {
@@ -248,6 +247,7 @@ public class MemberController {
     return new ResponseEntity<>(HttpStatus.OK);
   }
 
+  @PreAuthorize("hasAnyRole('ROLE_USER')")
   @Transactional
   @PostMapping("/password")
   public ResponseEntity<?> alterPassword(@Valid @RequestBody MemberRequestDto.AlterPassword request, BindingResult bindingResult, @IfLogin LoginUserDto loginUserDto) {
@@ -291,6 +291,7 @@ public class MemberController {
     return new ResponseEntity<>(updateResponse, HttpStatus.OK);
   }
 
+  @PreAuthorize("hasAnyRole('ROLE_USER')")
   @Transactional
   @GetMapping("/info")
   public ResponseEntity<?> lookupMemberInfo(@RequestParam String nickname) {
@@ -302,7 +303,7 @@ public class MemberController {
       return PostResponseDto.Pages.builder()
               .postId(post.getPostId())
               .postNo(post.getPostNo())
-              .category(post.getCategory())
+              .category(post.getCategory().getName())
               .title(post.getTitle())
               .writer(member.getNickname())
               .hits(post.getHits())
@@ -332,6 +333,7 @@ public class MemberController {
             .memberPostList(postDtoList)
             .memberCommentList(commentDtoList)
             .build();
+
     return new ResponseEntity<>(infoResponse, HttpStatus.OK);
   } 
 }
